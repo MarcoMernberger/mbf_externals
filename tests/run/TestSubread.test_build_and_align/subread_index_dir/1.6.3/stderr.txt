@@ -1,0 +1,70 @@
+
+        ==========     _____ _    _ ____  _____  ______          _____  
+        =====         / ____| |  | |  _ \|  __ \|  ____|   /\   |  __ \ 
+          =====      | (___ | |  | | |_) | |__) | |__     /  \  | |  | |
+            ====      \___ \| |  | |  _ <|  _  /|  __|   / /\ \ | |  | |
+              ====    ____) | |__| | |_) | | \ \| |____ / ____ \| |__| |
+        ==========   |_____/ \____/|____/|_|  \_\______/_/    \_\_____/
+	  v1.6.3
+
+//=========================== indexBuilder setting ===========================\\
+||                                                                            ||
+||                Index name : srf                                            ||
+||               Index space : base-space                                     ||
+||                    Memory : 8000 Mbytes                                    ||
+||          Repeat threshold : 100 repeats                                    ||
+||  Distance to next subread : 3                                              ||
+||                                                                            ||
+||               Input files : 1 file in total                                ||
+||                             o genome.fasta                                 ||
+||                                                                            ||
+\\===================== http://subread.sourceforge.net/ ======================//
+
+//================================= Running ==================================\\
+||                                                                            ||
+|| Check the integrity of provided reference sequences ...                    ||
+|| No format issues were found                                                ||
+|| Scan uninformative subreads in reference sequences ...                     ||
+||    8%,   0 mins elapsed, rate=0.9k bps/s, total=0m                         ||
+||   16%,   0 mins elapsed, rate=1.9k bps/s, total=0m                         ||
+||   24%,   0 mins elapsed, rate=2.8k bps/s, total=0m                         ||
+||   33%,   0 mins elapsed, rate=3.8k bps/s, total=0m                         ||
+||   41%,   0 mins elapsed, rate=4.7k bps/s, total=0m                         ||
+||   49%,   0 mins elapsed, rate=5.6k bps/s, total=0m                         ||
+||   58%,   0 mins elapsed, rate=6.6k bps/s, total=0m                         ||
+||   66%,   0 mins elapsed, rate=7.5k bps/s, total=0m                         ||
+||   74%,   0 mins elapsed, rate=8.5k bps/s, total=0m                         ||
+||   83%,   0 mins elapsed, rate=9.4k bps/s, total=0m                         ||
+||   91%,   0 mins elapsed, rate=10.3k bps/s, total=0m                        ||
+||   99%,   0 mins elapsed, rate=11.3k bps/s, total=0m                        ||
+|| Build the index...                                                         ||
+||   41%,   0 mins elapsed, rate=infk bps/s, total=0m                         ||
+||   49%,   0 mins elapsed, rate=infk bps/s, total=0m                         ||
+||   58%,   0 mins elapsed, rate=infk bps/s, total=0m                         ||
+||   66%,   0 mins elapsed, rate=infk bps/s, total=0m                         ||
+||   74%,   0 mins elapsed, rate=infk bps/s, total=0m                         ||
+||   83%,   0 mins elapsed, rate=infk bps/s, total=0m                         ||
+||   91%,   0 mins elapsed, rate=3256.2k bps/s, total=0m                      ||
+||   99%,   0 mins elapsed, rate=3552.3k bps/s, total=0m                      ||
+||  108%,   0 mins elapsed, rate=3848.3k bps/s, total=0m                      ||
+||  116%,   0 mins elapsed, rate=4144.3k bps/s, total=0m                      ||
+||  124%,   0 mins elapsed, rate=4440.3k bps/s, total=0m                      ||
+||  133%,   0 mins elapsed, rate=4736.3k bps/s, total=0m                      ||
+|| Save current index block...                                                ||
+||  [ 0.0% finished ]                                                         ||
+||  [ 10.0% finished ]                                                        ||
+||  [ 20.0% finished ]                                                        ||
+||  [ 30.0% finished ]                                                        ||
+||  [ 40.0% finished ]                                                        ||
+||  [ 50.0% finished ]                                                        ||
+||  [ 60.0% finished ]                                                        ||
+||  [ 70.0% finished ]                                                        ||
+||  [ 80.0% finished ]                                                        ||
+||  [ 90.0% finished ]                                                        ||
+||  [ 100.0% finished ]                                                       ||
+||                                                                            ||
+||                      Total running time: 0.0 minutes.                      ||
+||Index /home/finkernagel/upstream/mbf_externals/tests/run/TestSubread.t ... ||
+||                                                                            ||
+\\===================== http://subread.sourceforge.net/ ======================//
+

@@ -111,6 +111,9 @@ class TestExternalStore:
         assert Path(job.filenames[0]).exists()
         assert (Path(job.filenames[0]).parent / "stdout.txt").read_text() == "was 0\n"
         assert (Path(job.filenames[0]).parent / "stderr.txt").read_text() == ""
+        assert (Path(job.filenames[0]).parent / "cmd.txt").read_text() == repr(
+            [str(Path("../../../tests/unpacked/whatever/0.1/whatever.sh").resolve()), "0"]
+        )
 
     def test_passing_arguments_and_returncode_issues(self, new_pipeline):
         algo = WhateverAlgorithm()

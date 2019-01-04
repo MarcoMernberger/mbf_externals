@@ -22,6 +22,7 @@ class FASTQC(ExternalAlgorithm):
             str(output_directory),
         ] + [str(x) for x in input_files]
 
+    @property
     def multi_core(self):
         return True
 

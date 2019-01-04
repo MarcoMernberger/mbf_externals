@@ -45,6 +45,7 @@ class ExternalAlgorithm(ABC):
     def build_cmd(self, output_directory, ncores, arguments):
         pass  # pragma: no cover
 
+    @property
     def multi_core(self):
         return False
 
@@ -55,23 +56,25 @@ class ExternalAlgorithm(ABC):
         sentinel = true_output_directory / "sentinel.txt"
         stdout = true_output_directory / "stdout.txt"
         stderr = true_output_directory / "stderr.txt"
+        cmd_out = true_output_directory / "cmd.txt"
 
         def do_run():
             self.store.unpack_version(self.name, self.version)
             op_stdout = open(stdout, "wb")
             op_stderr = open(stderr, "wb")
-            start_time = time.time()
-            p = subprocess.Popen(
-                self.build_cmd(
+            cmd = [
+                str(x)
+                for x in self.build_cmd(
                     output_directory,
                     ppg.util.global_pipegraph.rc.cores_available
-                    if self.multi_core()
+                    if self.multi_core
                     else 1,
                     arguments,
-                ),
-                stdout=op_stdout,
-                stderr=op_stderr,
-            )
+                )
+            ]
+            cmd_out.write_text(repr(cmd))
+            start_time = time.time()
+            p = subprocess.Popen(cmd, stdout=op_stdout, stderr=op_stderr)
             p.communicate()
             op_stdout.close()
             op_stderr.close()
@@ -91,7 +94,7 @@ class ExternalAlgorithm(ABC):
                 self.store.get_zip_file_path(self.name, self.version)
             )
         )
-        if self.multi_core():
+        if self.multi_core:
             job.cores_needed = -1
         return job
 
@@ -112,7 +115,10 @@ class ExternalAlgorithmStore:
         self._version_cache = {}
 
     def get_available_versions(self, algorithm_name):
-        if not algorithm_name in self._version_cache or not self._version_cache[algorithm_name]:
+        if (
+            not algorithm_name in self._version_cache
+            or not self._version_cache[algorithm_name]
+        ):
             matching = self.zip_path.glob(f"{algorithm_name}__*.tar.gz")
             versions = [x.stem[x.stem.find("__") + 2 : -4] for x in matching]
             self._version_cache[algorithm_name] = natsort.natsorted(versions)

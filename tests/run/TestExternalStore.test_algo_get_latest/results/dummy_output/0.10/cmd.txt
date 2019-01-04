@@ -1,0 +1,1 @@
+['/home/finkernagel/upstream/mbf_externals/tests/unpacked/dummy/0.10/dummy.sh']

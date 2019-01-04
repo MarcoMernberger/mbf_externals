@@ -46,7 +46,8 @@ def new_pipeline(request):
         ppg.util.global_pipegraph.result_dir = Path("results")
         yield ppg.util.global_pipegraph
         try:
-            shutil.rmtree(Path(__file__).parent / "run")
+            # shutil.rmtree(Path(__file__).parent / "run")
+            pass
         except OSError:
             pass
     finally:
