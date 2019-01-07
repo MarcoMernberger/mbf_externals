@@ -21,6 +21,7 @@ sys.path.append(str(root / "src"))
 
 @pytest.fixture
 def new_pipeline(request):
+    print("new_pipeline called")
     if request.cls is None:
         target_path = Path(__file__).parent / "run" / ("." + request.node.name)
     else:
@@ -42,9 +43,15 @@ def new_pipeline(request):
         except OSError:
             pass
         rc = ppg.resource_coordinators.LocalSystem(1)
-        ppg.new_pipegraph(rc, quiet=True)
-        ppg.util.global_pipegraph.result_dir = Path("results")
-        yield ppg.util.global_pipegraph
+
+        def np():
+            ppg.new_pipegraph(rc, quiet=True)
+            ppg.util.global_pipegraph.result_dir = Path("results")
+            g = ppg.util.global_pipegraph
+            g.new_pipeline = np
+            return g
+
+        yield np()
         try:
             # shutil.rmtree(Path(__file__).parent / "run")
             pass

@@ -50,3 +50,4 @@ MANIFEST
 
 result_images
 *.coverage*
+tests/run/*

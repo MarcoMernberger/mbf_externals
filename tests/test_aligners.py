@@ -10,7 +10,7 @@ class TestSubread:
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
         index_name = "subread_index_dir/srf"
-        build_job = s.build_index([data_path / "genome.fasta"], index_name)
+        build_job = s.build_index([data_path / "genome.fasta"], None, index_name)
         align_job = s.align(data_path / "sample.fastq", None, index_name, "out/out.bam")
         align_job.depends_on(build_job)
         new_pipeline.run()
@@ -40,7 +40,7 @@ class TestSubread:
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
         index_name = "subread_index_dir/srf"
-        build_job = s.build_index(data_path / "genome.fasta", index_name)
+        build_job = s.build_index(data_path / "genome.fasta", None, index_name)
         align_job = s.align(
             data_path / "sample_R1_.fastq",
             data_path / "sample_R2_.fastq",

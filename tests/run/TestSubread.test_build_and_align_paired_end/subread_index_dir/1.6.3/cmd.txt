@@ -1,1 +1,0 @@
-['/home/finkernagel/upstream/dev/mbf_store/unpack/Subread/1.6.3/subread-1.6.3-Linux-x86_64/bin/subread-buildindex', '-o', '/home/finkernagel/upstream/mbf_externals/tests/run/TestSubread.test_build_and_align_paired_end/subread_index_dir/srf', '/home/finkernagel/upstream/mbf_externals/tests/sample_data/genome.fasta']

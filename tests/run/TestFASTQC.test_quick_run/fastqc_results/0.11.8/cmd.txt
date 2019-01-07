@@ -1,1 +1,0 @@
-['/home/finkernagel/upstream/dev/mbf_store/unpack/FASTQC/0.11.8/FastQC/fastqc', '-t', '1', '--noextract', '--quiet', '-o', 'fastqc_results', '/home/finkernagel/upstream/mbf_externals/tests/sample_data/sample_a', 'a.fastq', '/home/finkernagel/upstream/mbf_externals/tests/sample_data/sample_a', 'b.fastq.gz']

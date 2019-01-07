@@ -10,5 +10,5 @@ class Aligner(ExternalAlgorithm):
         pass  # pragma: no cover
 
     @abstractmethod
-    def build_index(self, fasta_files, output_prefix):
+    def build_index(self, fasta_files, gtf_input_filename, output_prefix):
         pass  # pragma: no cover

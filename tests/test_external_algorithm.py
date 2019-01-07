@@ -47,11 +47,11 @@ class SelfFetchingAlgorithm(ExternalAlgorithm):
 
 
 class TestExternalStore:
-    def test_get_versions(self, local_store):
+    def test_get_versions(self, local_store, new_pipeline):
         assert local_store.get_available_versions("dummy") == ["0.1", "0.2", "0.10"]
         assert local_store.get_available_versions("another_dummy") == ["0.2"]
 
-    def test_unpack_version(self, local_store):
+    def test_unpack_version(self, local_store, new_pipeline):
         local_store.unpack_version("dummy", "0.1")
         assert (local_store.unpack_path / "dummy" / "0.1" / "unpack_done.txt").exists()
         assert (local_store.unpack_path / "dummy" / "0.1" / "dummy.sh").exists()
@@ -84,7 +84,7 @@ class TestExternalStore:
             local_store.unpack_version("nosuchalgorithm", "0.15")
 
     def test_algo_get_latest(self, new_pipeline):
-        algo = DummyAlgorithm()
+        algo = DummyAlgorithm(version="_latest")
         assert algo.version == "0.10"
         job = algo.run(new_pipeline.result_dir / "dummy_output")
         assert job.cores_needed == -1
@@ -95,11 +95,31 @@ class TestExternalStore:
         ).read_text() == "hello world10\n"
         assert (Path(job.filenames[0]).parent / "stderr.txt").read_text() == ""
 
-    def test_algo_get_specific(self):
+    def test_algo_get_auto_from_scratch(self, new_pipeline):
+        algo = DummyAlgorithm(version="_last_used")
+        assert algo.version == "0.10"
+        assert Path(".mbf_external_versions").read_text() == "dummy==0.10\n"
+
+    def test_algo_get_auto_from_after_pull(self, new_pipeline):
+        algo = DummyAlgorithm(version="0.2")
+        assert algo.version == "0.2"
+        assert Path(".mbf_external_versions").read_text() == "dummy==0.2\n"
+        algo = DummyAlgorithm(version="_last_used")
+        assert algo.version == "0.2"
+        assert Path(".mbf_external_versions").read_text() == "dummy==0.2\n"
+        algo = DummyAlgorithm(version="0.10")
+        assert algo.version == "0.10"
+        assert Path(".mbf_external_versions").read_text() == "dummy==0.10\n"
+        algo = WhateverAlgorithm()
+        assert (
+            Path(".mbf_external_versions").read_text() == "dummy==0.10\nwhatever==0.1\n"
+        )
+
+    def test_algo_get_specific(self, new_pipeline):
         algo = DummyAlgorithm("0.2")
         assert algo.version == "0.2"
 
-    def test_algo_get_non_existant(self):
+    def test_algo_get_non_existant(self, new_pipeline):
         with pytest.raises(ValueError):
             DummyAlgorithm("0.2nsv")
 
@@ -112,7 +132,10 @@ class TestExternalStore:
         assert (Path(job.filenames[0]).parent / "stdout.txt").read_text() == "was 0\n"
         assert (Path(job.filenames[0]).parent / "stderr.txt").read_text() == ""
         assert (Path(job.filenames[0]).parent / "cmd.txt").read_text() == repr(
-            [str(Path("../../../tests/unpacked/whatever/0.1/whatever.sh").resolve()), "0"]
+            [
+                str(Path("../../../tests/unpacked/whatever/0.1/whatever.sh").resolve()),
+                "0",
+            ]
         )
 
     def test_passing_arguments_and_returncode_issues(self, new_pipeline):
@@ -124,7 +147,7 @@ class TestExternalStore:
         assert (Path(job.filenames[0]).parent / "stdout.txt").read_text() == "was 1\n"
         assert (Path(job.filenames[0]).parent / "stderr.txt").read_text() == ""
 
-    def test_fetching(self, local_store):
+    def test_fetching(self, local_store, new_pipeline):
         tf = local_store.zip_path / "fetchme__funny_funny__version.tar.gz"
         if tf.exists():
             tf.unlink()

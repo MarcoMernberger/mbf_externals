@@ -3,8 +3,8 @@ import time
 import os
 import subprocess
 from abc import ABC, abstractmethod
-import natsort
 import pypipegraph as ppg
+from .util import lazy_property, sort_versions
 
 _global_store = None
 
@@ -15,26 +15,77 @@ def change_global_store(new_store):
 
 
 class ExternalAlgorithm(ABC):
-    def __init__(self, version="latest", store=None):
+    """Together with an ExternalAlgorithmStore (or the global one),
+    ExternalAlgorithm encapsulates a callable algorithm such as a high throughput aligner.
+    """
+
+    def __init__(self, version="_last_used", store=None):
+        """
+        Parameters
+        ----------
+            version: str
+            either one of the available versions from the store,
+            _latest (always the latest!) or
+            _last_used  - the last used one, or the newes if this is the first time
+                (stored '.mbf_external_versions' )
+
+        """
+
         if store is None:
             store = _global_store
         self.store = store
-        if version == "latest":
+
+        if version == "_last_used":
+            actual_version = self._last_used_version
+            if actual_version is None:
+                actual_version = "_latest"
+        else:
+            actual_version = version
+        if actual_version == "_latest":
             try:
                 self.version = store.get_available_versions(self.name)[-1]
             except IndexError:
                 self.fetch_latest_version()
                 self.version = store.get_available_versions(self.name)[-1]
-        elif version == "fetching":  # pragma: no cover
-            self.version = "fetching"
+        elif actual_version == "_fetching":  # pragma: no cover
+            self.version = "_fetching"
         else:
-            if version in store.get_available_versions(self.name):
-                self.version = version
+            if actual_version in store.get_available_versions(self.name):
+                self.version = actual_version
             else:
                 raise ValueError(
-                    f"Version {version} not found for algorithm {self.name}"
+                    f"Version {actual_version} not found for algorithm {self.name}"
                 )
+        self._store_used_version()
         self.path = store.get_unpacked_path(self.name, self.version)
+
+    @lazy_property
+    def _last_used_version(self):
+        try:
+            lines = Path(".mbf_external_versions").read_text().strip().split("\n")
+            for l in lines:
+                if l.strip():
+                    name, version = l.split("==")
+                    if name == self.name:
+                        return version
+        except OSError:
+            pass
+        return None
+
+    def _store_used_version(self):
+        last_used = self._last_used_version
+        if (
+            last_used is None
+            or sort_versions([last_used, self.version])[0] == last_used
+        ):
+            try:
+                p = Path(".mbf_external_versions")
+                lines = p.read_text().strip().split("\n")
+                lines = [x for x in lines if not x.startswith(self.name + "==")]
+            except OSError:
+                lines = []
+            lines.append(f"{self.name}=={self.version}")
+            p.write_text("\n".join(lines) + "\n")
 
     @property
     @abstractmethod
@@ -121,7 +172,7 @@ class ExternalAlgorithmStore:
         ):
             matching = self.zip_path.glob(f"{algorithm_name}__*.tar.gz")
             versions = [x.stem[x.stem.find("__") + 2 : -4] for x in matching]
-            self._version_cache[algorithm_name] = natsort.natsorted(versions)
+            self._version_cache[algorithm_name] = sort_versions(versions)
         return self._version_cache[algorithm_name]
 
     def unpack_version(self, algorithm_name, version):

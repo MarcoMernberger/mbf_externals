@@ -1,4 +1,0 @@
-Skipping '/home/finkernagel/upstream/mbf_externals/tests/sample_data/sample_a' which didn't exist, or couldn't be read
-Skipping 'a.fastq' which didn't exist, or couldn't be read
-Skipping '/home/finkernagel/upstream/mbf_externals/tests/sample_data/sample_a' which didn't exist, or couldn't be read
-Skipping 'b.fastq.gz' which didn't exist, or couldn't be read

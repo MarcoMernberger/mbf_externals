@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class Subread(Aligner):
-    def __init__(self, parameters, version="latest", store=None):
+    def __init__(self, parameters, version="_last_used", store=None):
         super().__init__(version, store)
         if not parameters.get("input_type") in ("dna", "rna"):
             raise ValueError("invalid parameters['input_type'], must be dna or rna")
@@ -75,7 +75,7 @@ class Subread(Aligner):
         )
         return job
 
-    def build_index(self, fasta_files, output_fileprefix):
+    def build_index(self, fasta_files, gtf_input_filename, output_fileprefix):
         cmd = [
             "FROM_SUBREAD",
             str(

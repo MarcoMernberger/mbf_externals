@@ -5,6 +5,7 @@ from .externals import (
     virtual_env_store,
 )
 from .fastq import FASTQC
+from .prebuild import PrebuildManager
 
 all = [
     ExternalAlgorithm,
@@ -12,4 +13,5 @@ all = [
     FASTQC,
     change_global_store,
     virtual_env_store,
+    PrebuildManager,
 ]
