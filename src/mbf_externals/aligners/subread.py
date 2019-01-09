@@ -1,15 +1,12 @@
 from .base import Aligner
 import pypipegraph as ppg
 from pathlib import Path
+from ..util import download_file, Version
 
 
 class Subread(Aligner):
-    def __init__(self, parameters, version="_last_used", store=None):
+    def __init__(self, version="_last_used", store=None):
         super().__init__(version, store)
-        if not parameters.get("input_type") in ("dna", "rna"):
-            raise ValueError("invalid parameters['input_type'], must be dna or rna")
-
-        self.parameters = parameters
 
     @property
     def name(self):
@@ -34,10 +31,18 @@ class Subread(Aligner):
         else:
             return arguments[1:]
 
-    def align(
-        self, input_fastq, paired_end_filename, index_basename, output_bam_filename
+    def align_job(
+        self,
+        input_fastq,
+        paired_end_filename,
+        index_basename,
+        output_bam_filename,
+        parameters,
     ):
-        if self.parameters["input_type"] == "dna":
+        if not parameters.get("input_type") in ("dna", "rna"):
+            raise ValueError("invalid parameters['input_type'], must be dna or rna")
+
+        if parameters["input_type"] == "dna":
             input_type = "1"
         else:
             input_type = "0"
@@ -53,29 +58,25 @@ class Subread(Aligner):
             "-t",
             input_type,
             "-I",
-            "%i" % self.parameters.get("indels_up_to", 5),
+            "%i" % parameters.get("indels_up_to", 5),
             "-B",
-            "%i" % self.parameters.get("max_mapping_locations", 1),
+            "%i" % parameters.get("max_mapping_locations", 1),
             "-i",
-            str(Path(index_basename).absolute()),
+            (Path(index_basename)).absolute(),
             "-r",
-            str(Path(input_fastq).absolute()),
+            Path(input_fastq).absolute(),
             "-o",
-            str(
-                (
-                    output_bam_filename.parent / self.version / output_bam_filename.name
-                ).absolute()
-            ),
+            output_bam_filename.absolute(),
         ]
         if paired_end_filename:
             cmd.extend(("-R", str(Path(paired_end_filename).absolute())))
         job = self.run(Path(output_bam_filename).parent, cmd)
         job.depends_on(
-            ppg.ParameterInvariant(output_bam_filename, sorted(self.parameters.items()))
+            ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))
         )
         return job
 
-    def build_index(self, fasta_files, gtf_input_filename, output_fileprefix):
+    def build_index_func(self, fasta_files, gtf_input_filename, output_fileprefix):
         cmd = [
             "FROM_SUBREAD",
             str(
@@ -85,25 +86,32 @@ class Subread(Aligner):
                 / "subread-buildindex"
             ),
             "-o",
-            str(Path(output_fileprefix).absolute()),
+            str((output_fileprefix / "subread_index").absolute()),
         ]
         if not hasattr(fasta_files, "__iter__"):
             fasta_files = [fasta_files]
         cmd.extend([str(Path(x).absolute()) for x in fasta_files])
-        job = self.run(Path(output_fileprefix).parent, cmd)
-        job.depends_on(ppg.MultiFileInvariant(fasta_files))
-        return job
+        return self.get_run_func(output_fileprefix, cmd)
+
+    def get_index_version_range(self):
+        """What minimum_acceptable_version, maximum_acceptable_version for the index is ok?"""
+        if Version(self.version) >= "1.6":
+            return "1.6", None
+        else:
+            return "0.1", "1.5.99"
 
     def fetch_latest_version(self):  # pragma: no cover
-        v = "1.6.3"
-        if v in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, v).absolute()
-        import requests
-        import shutil
+        return (
+            self.fetch_version("1.6.3"),
+            self.fetch_version("1.4.3-p1"),
+            self.fetch_version("1.5.0"),
+        )
 
-        url = f"https://downloads.sourceforge.net/project/subread/subread-{v}/subread-{v}-Linux-x86_64.tar.gz"
-        r = requests.get(url, stream=True)
+    def fetch_version(self, version):  # pragma: no cover
+        if version in self.store.get_available_versions(self.name):
+            return
+        target_filename = self.store.get_zip_file_path(self.name, version).absolute()
+
+        url = f"https://downloads.sourceforge.net/project/subread/subread-{version}/subread-{version}-Linux-x86_64.tar.gz"
         with open(target_filename, "wb") as op:
-            r.raw.decode_content = True
-            shutil.copyfileobj(r.raw, op)
+            download_file(url, op)

@@ -3,6 +3,7 @@
 #  from pathlib import Path
 #  from .. import find_code_path
 from ..externals import ExternalAlgorithm
+from ..util import download_file
 
 
 class FASTQC(ExternalAlgorithm):
@@ -27,9 +28,7 @@ class FASTQC(ExternalAlgorithm):
         return True
 
     def fetch_latest_version(self):  # pragma: no cover
-        import requests
         import tempfile
-        import shutil
         from pathlib import Path
         import subprocess
 
@@ -40,12 +39,8 @@ class FASTQC(ExternalAlgorithm):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             url = f"https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{v}.zip"
-            print("downloading", url)
-            r = requests.get(url, stream=True)
-            r.raw.decode_content = True
-            zip_file = (tmpdir / "fastqc.zip").open("wb")
-            shutil.copyfileobj(r.raw, zip_file)
-            zip_file.close()
+            with (tmpdir / "fastqc.zip").open("wb") as zip_file:
+                download_file(url, zip_file)
             import zipfile
 
             with zipfile.ZipFile(zip_file.name, "r") as zip_ref:

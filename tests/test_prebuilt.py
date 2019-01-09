@@ -30,6 +30,7 @@ class TestPrebuilt:
         ).depends_on(jobA)
         ppg.util.global_pipegraph.run()
         assert Path("prebuilt/test_host/dummy/0.1/outA").read_text() == "hello\nworld0"
+        assert Path("prebuilt/test_host/dummy/0.1/outA.md5sum").exists()
         assert Path("shu").read_text() == "hello\nworld0"
 
         # no rerunning.
@@ -277,3 +278,236 @@ class TestPrebuilt:
             PrebuildJob([5], lambda: 5, "shu")
         with pytest.raises(ValueError):
             PrebuildJob([Path("shu").absolute()], lambda: 5, "shu")
+
+    def test_minimal_and_maximal_versions(self, new_pipeline):
+        Path("prebuilt").mkdir()
+        count_file = Path("count")
+        count_file.write_text("0")
+        mgr = PrebuildManager("prebuilt", "test_host")
+
+        def calc_04(output_path):
+            (output_path / "A").write_text("0.4")
+            c = int(count_file.read_text())
+            count_file.write_text(str(c + 1))
+
+        def calc_05(output_path):
+            (output_path / "A").write_text("0.5")
+            c = int(count_file.read_text())
+            count_file.write_text(str(c + 1))
+
+        def calc_06(output_path):
+            (output_path / "A").write_text("0.6")
+            c = int(count_file.read_text())
+            count_file.write_text(str(c + 1))
+
+        def calc_07(output_path):
+            (output_path / "A").write_text("0.7")
+            c = int(count_file.read_text())
+            count_file.write_text(str(c + 1))
+
+        jobA = mgr.prebuild("partA", "0.5", [], "A", calc_05)
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA)
+        ppg.util.global_pipegraph.quiet = False
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.5"
+        assert Path("checkme").read_text() == "0.5"
+        assert count_file.read_text() == "1"
+
+        # no rerun here
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.5",
+            [],
+            "A",
+            calc_05,
+            minimum_acceptable_version="0.3",
+            maximum_acceptable_version="0.6",
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.5"
+        assert Path("checkme").read_text() == "0.5"
+        assert count_file.read_text() == "1"
+
+        # no rerun on I want this exact version
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.5",
+            [],
+            "A",
+            calc_05,
+            minimum_acceptable_version="0.5",
+            maximum_acceptable_version="0.5",
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.5"
+        assert Path("checkme").read_text() == "0.5"
+        assert count_file.read_text() == "1"
+
+        # but we don't have this one
+        new_pipeline.new_pipeline()
+        ppg.util.global_pipegraph.quiet = False
+        jobA = mgr.prebuild(
+            "partA",
+            "0.6",
+            [],
+            "A",
+            calc_06,
+            minimum_acceptable_version="0.6",
+            maximum_acceptable_version=None,
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.6"
+        assert Path("checkme").read_text() == "0.6"
+        assert count_file.read_text() == "2"
+
+        # again no rerun
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.6",
+            [],
+            "A",
+            calc_06,
+            minimum_acceptable_version="0.5",
+            maximum_acceptable_version=None,
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.6"
+        assert Path("checkme").read_text() == "0.6"
+        assert jobA.version == "0.6"  # since 0.6 was build
+        assert count_file.read_text() == "2"
+
+        # get an older one
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.4",
+            [],
+            "A",
+            calc_04,
+            minimum_acceptable_version=None,
+            maximum_acceptable_version="0.4",
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.4"
+        assert Path("checkme").read_text() == "0.4"
+        assert count_file.read_text() == "3"
+
+        # you want 0.4-.. you get' the 0.6
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.7",
+            [],
+            "A",
+            calc_06,  # no change here...
+            minimum_acceptable_version="0.4",
+            maximum_acceptable_version=None,
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.6"
+        assert Path("checkme").read_text() == "0.6"
+        assert jobA.version == "0.6"
+        assert count_file.read_text() == "3"  # no rerun of the build
+
+        # you want 0.4-.. but you changed the build func -> 0.7
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.7",
+            [],
+            "A",
+            calc_07,  # no change here...
+            minimum_acceptable_version="0.4",
+            maximum_acceptable_version=None,
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        # and no rebuild
+        assert jobA.find_file("A").read_text() == "0.7"
+        assert Path("checkme").read_text() == "0.7"
+        assert jobA.version == "0.7"
+        assert count_file.read_text() == "4"
+
+        # you want 0.5 min, with an 05 build func, you get 0.5 - and a rerun
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.5",
+            [],
+            "A",
+            calc_05,
+            minimum_acceptable_version="0.5",
+            maximum_acceptable_version=None,
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.5"
+        assert Path("checkme").read_text() == "0.5"
+        assert jobA.version == "0.5"
+        assert count_file.read_text() == "4"
+
+        # and at last, we want 0.5
+        new_pipeline.new_pipeline()
+        jobA = mgr.prebuild(
+            "partA",
+            "0.5",
+            [],
+            "A",
+            calc_05,
+            minimum_acceptable_version="0.5",
+            maximum_acceptable_version="0.5",
+        )
+        ppg.FileGeneratingJob(
+            "checkme",
+            lambda: Path("checkme").write_text(jobA.find_file("A").read_text()),
+        ).depends_on(jobA).depends_on_params(jobA.version)
+
+        ppg.util.global_pipegraph.run()
+        assert jobA.find_file("A").read_text() == "0.5"
+        assert Path("checkme").read_text() == "0.5"
+        assert jobA.version == "0.5"
+        assert count_file.read_text() == "4"

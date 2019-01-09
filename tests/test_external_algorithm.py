@@ -3,6 +3,7 @@ from pathlib import Path
 import pypipegraph as ppg
 import pytest
 from mbf_externals import ExternalAlgorithm
+from mbf_externals.util import Version
 
 
 class DummyAlgorithm(ExternalAlgorithm):
@@ -157,3 +158,50 @@ class TestExternalStore:
         assert (
             local_store.get_available_versions("fetchme")[0] == "funny_funny__version"
         )
+
+
+class TestUtils:
+    def test_get_page(self):
+        from mbf_externals.util import get_page
+
+        assert "gtf" in get_page("http://ftp.ensembl.org/pub/release-77/")
+        assert "gtf" in get_page("ftp://ftp.ensembl.org/pub/release-77/")
+        assert "gtf" in get_page("ftp://ftp.ensembl.org/pub/release-77/README")
+        with pytest.raises(ValueError):
+            get_page("ftp://ftp.ensembl.org/pub/release-77/doesnotexist")
+
+    def test_download_file_and_gunzip(self, new_pipeline):
+        from mbf_externals.util import download_file_and_gunzip
+
+        download_file_and_gunzip(
+            "http://ftp.ensembl.org/pub/release-77/mysql/ailuropoda_melanoleuca_core_77_1/map.txt.gz",
+            "map.txt",
+        )
+        assert Path("map.txt").read_text() == ""
+
+    def test_download_file_with_filename_raises(self):
+        from mbf_externals.util import download_file
+
+        with pytest.raises(ValueError):
+            download_file("http://ftp.ensembl.org", "out.file")
+
+    def test_compare_versions(self):
+        assert Version("") == ""
+        assert Version("") == Version("")
+        assert Version("0.1") == Version("0.1")
+        assert Version("0.2") > "0.1"
+        assert Version("0.2") < "0.3"
+        assert Version("1.5.0") < "1.6.0"
+        assert Version("1.4.3") < "1.5.0"
+        assert Version("1.4.3-p1") < "1.5.99"
+        assert not (Version("0.4") > "0.4")
+        assert not (Version("0.4") < "0.4")
+        assert Version("0.4") >= "0.4"
+        assert Version("0.4") <= "0.4"
+        assert Version("0.4") < "0.5"
+        assert Version("0.4") < "0.6"
+        assert Version("1.5.0") < "1.6"
+        assert str(Version("1.5")) == "1.5"
+        assert repr(Version("1.5")) == 'Version("1.5")'
+        assert Version("1.5.0") < Version("1.6")
+        assert Version("1.6.0") > Version("1.5.99.shu")

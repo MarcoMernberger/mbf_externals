@@ -5,7 +5,7 @@ experiment and need to be versioned,
 but they can often be shared among versions."""
 
 import socket
-from .util import compare_versions, sort_versions, UpstreamChangedError
+from .util import Version, sort_versions, UpstreamChangedError, write_md5_sum
 import hashlib
 import pypipegraph as ppg
 from pathlib import Path
@@ -18,14 +18,17 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
     def __init__(self, storage_filename, func):
         super().__init__(storage_filename, func)
 
-    def _get_invariant(self, old, all_invariant_stati):
-        if hasattr(self.function, "im_func") and "cyfunction" in repr(
-            self.function.im_func
-        ):
-            invariant = self.get_cython_source(self.function)  # pragma: no cover
+    @classmethod
+    def hash_function(cls, function):
+        if hasattr(function, "im_func") and "cyfunction" in repr(function.im_func):
+            invariant = cls.get_cython_source(function)  # pragma: no cover
         else:
-            invariant = self.dis_code(self.function.__code__, self.function)
+            invariant = cls.dis_code(function.__code__, function)
         invariant_hash = hashlib.md5(invariant.encode("utf-8")).hexdigest()
+        return invariant_hash
+
+    def _get_invariant(self, old, all_invariant_stati):
+        invariant_hash = self.hash_function(self.function)
         stf = Path(self.job_id)
         if stf.exists():
             old_hash = stf.read_text()
@@ -125,6 +128,8 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
         def calc():
             self.real_callback(output_path)
             self.filenames[-1].write_text(str(time.time()))
+            for fn in output_files:
+                write_md5_sum(fn)
 
         super().__init__(output_files, calc, rename_broken=True, empty_files_ok=True)
         self.output_path = output_path
@@ -179,27 +184,49 @@ class PrebuildManager:
         output_files,
         calculating_function,
         minimum_acceptable_version=None,
+        maximum_acceptable_version=None,
     ):
         """Create a job that will prebuilt the files if necessary"""
         if minimum_acceptable_version is None:
             minimum_acceptable_version = version
 
         available_versions = self._find_versions(name)
-        ok_versions = sort_versions(
-            [
-                (v, p)
-                for v, p in available_versions.items()
-                if compare_versions(v, minimum_acceptable_version)
-            ]
-        )
-        if ok_versions:
-            version, output_path = ok_versions[-1]
+        if version in available_versions:
+            output_path = available_versions[version]
         else:
-            output_path = self.prebuilt_path / self.hostname / name / version
+            # these are within minimum..maximum_acceptable_version
+            acceptable_versions = sort_versions(
+                [
+                    (v, p)
+                    for v, p in available_versions.items()
+                    if (
+                        (Version(v) >= minimum_acceptable_version)
+                        and (
+                            maximum_acceptable_version is None
+                            or (Version(v) < maximum_acceptable_version)
+                        )
+                    )
+                ]
+            )
+            ok_versions = []
+            calculating_function_md5_sum = PrebuildFunctionInvariantFileStoredExploding.hash_function(
+                calculating_function
+            )
+            for v, p in acceptable_versions:
+                func_md5sum_path = p / "mbf_func.md5sum"
+                func_md5sum = func_md5sum_path.read_text()
+                if func_md5sum == calculating_function_md5_sum:
+                    ok_versions.append((v, p))
+
+            if ok_versions:
+                version, output_path = ok_versions[-1]
+            else:  # no version that is within the acceptable range and had the same build function
+                output_path = self.prebuilt_path / self.hostname / name / version
 
         if isinstance(output_files, (str, Path)):
             output_files = [output_files]
         output_files = [Path(of) for of in output_files]
         job = PrebuildJob(output_files, calculating_function, output_path)
         job.depends_on(PrebuildFileInvariantsExploding(output_path, input_files))
+        job.version = version
         return job

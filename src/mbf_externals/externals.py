@@ -54,7 +54,7 @@ class ExternalAlgorithm(ABC):
                 self.version = actual_version
             else:
                 raise ValueError(
-                    f"Version {actual_version} not found for algorithm {self.name}"
+                    f"Version '{actual_version}' not found for algorithm {self.name}"
                 )
         self._store_used_version()
         self.path = store.get_unpacked_path(self.name, self.version)
@@ -100,17 +100,39 @@ class ExternalAlgorithm(ABC):
     def multi_core(self):
         return False
 
-    def run(self, output_directory, arguments=None):
+    def run(self, output_directory, arguments=None, cwd=None, call_afterwards=None):
+        """Return a job that runs the algorithm and puts the
+        results in output_directory.
+        Note that assigning different ouput_directories to different
+        versions is your problem.
+        """
         output_directory = Path(output_directory)
-        true_output_directory = output_directory / self.version
-        true_output_directory.mkdir(parents=True, exist_ok=True)
-        sentinel = true_output_directory / "sentinel.txt"
-        stdout = true_output_directory / "stdout.txt"
-        stderr = true_output_directory / "stderr.txt"
-        cmd_out = true_output_directory / "cmd.txt"
+        output_directory.mkdir(parents=True, exist_ok=True)
+        sentinel = output_directory / "sentinel.txt"
 
+        job = ppg.FileGeneratingJob(
+            sentinel,
+            self.get_run_func(
+                output_directory, arguments, cwd=cwd, call_afterwards=call_afterwards
+            ),
+        ).depends_on(
+            ppg.FileChecksumInvariant(
+                self.store.get_zip_file_path(self.name, self.version)
+            ),
+            ppg.FunctionInvariant(str(sentinel) + "_call_afterwards", call_afterwards),
+        )
+        if self.multi_core:
+            job.cores_needed = -1
+        return job
+
+    def get_run_func(self, output_directory, arguments, cwd=None, call_afterwards=None):
         def do_run():
             self.store.unpack_version(self.name, self.version)
+            sentinel = output_directory / "sentinel.txt"
+            stdout = output_directory / "stdout.txt"
+            stderr = output_directory / "stderr.txt"
+            cmd_out = output_directory / "cmd.txt"
+
             op_stdout = open(stdout, "wb")
             op_stderr = open(stderr, "wb")
             cmd = [
@@ -125,7 +147,7 @@ class ExternalAlgorithm(ABC):
             ]
             cmd_out.write_text(repr(cmd))
             start_time = time.time()
-            p = subprocess.Popen(cmd, stdout=op_stdout, stderr=op_stderr)
+            p = subprocess.Popen(cmd, stdout=op_stdout, stderr=op_stderr, cwd=cwd)
             p.communicate()
             op_stdout.close()
             op_stderr.close()
@@ -137,17 +159,12 @@ class ExternalAlgorithm(ABC):
                 sentinel.write_text(
                     f"run time: {runtime:.2f} seconds\nreturn code: {p.returncode}"
                 )
+                if call_afterwards is not None:
+                    call_afterwards()
             else:
                 raise ValueError(f"{self.name} run failed. Error was: {ok}")
 
-        job = ppg.FileGeneratingJob(sentinel, do_run).depends_on(
-            ppg.FileChecksumInvariant(
-                self.store.get_zip_file_path(self.name, self.version)
-            )
-        )
-        if self.multi_core:
-            job.cores_needed = -1
-        return job
+        return do_run
 
     def check_success(self, return_code, stdout, stderr):
         if return_code == 0:

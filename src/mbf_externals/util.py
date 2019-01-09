@@ -37,13 +37,116 @@ def sort_versions(versions):
     )
 
 
-def compare_versions(a, b):
-    """Return true if b >= a"""
-    if a == b:
-        return True
-    s = sort_versions([a, b])
-    return s[0] == b
+class Version:
+    def __init__(self, version):
+        self.version = version
+
+    def __str__(self):
+        return self.version
+
+    def __repr__(self):
+        return 'Version("%s")' % (self.version,)
+
+    def __eq__(self, other_version):
+        if isinstance(other_version, Version):
+            other = other_version.version
+        else:
+            other = other_version
+        return self.version == other
+
+    def __lt__(self, other_version):
+        if isinstance(other_version, Version):
+            other = other_version.version
+        else:
+            other = other_version
+        s = sort_versions([self.version, other])
+        return s[0] == self.version and not self.version == other
+
+    def __le__(self, other_version):
+        return (self == other_version) or (self < other_version)
+
+    def __gt__(self, other_version):
+        if isinstance(other_version, Version):
+            other = other_version.version
+        else:
+            other = other_version
+        s = sort_versions([self.version, other])
+        return s[1] == self.version and not self.version == other
+
+    def __ge__(self, other_version):
+        return (self == other_version) or (self > other_version)
 
 
 class UpstreamChangedError(ValueError):
     pass
+
+
+def download_file(url, file_object):
+    """Download an url"""
+
+    if isinstance(file_object, str):
+        raise ValueError("dowload_file needs a file-object not a name")
+
+    if url.startswith("ftp"):
+        return download_ftp(url, file_object)
+    else:
+        return download_http(url, file_object)
+
+
+def download_http(url, file_object):
+    """Download a file from http"""
+    import requests
+    import shutil
+
+    r = requests.get(url, stream=True)
+    r.raw.decode_content = True
+    shutil.copyfileobj(r.raw, file_object)
+
+
+def download_ftp(url, file_object):
+    """Download a file from ftp"""
+    import ftplib
+    import urllib
+
+    schema, host, path, parameters, query, fragment = urllib.parse.urlparse(url)
+    with ftplib.FTP(host) as ftp:
+        try:
+            ftp.login("anonymous", "")
+            if path.endswith("/"):
+                ftp.retrbinary("LIST " + path, file_object.write)
+            else:
+                ftp.retrbinary("RETR " + path, file_object.write)
+        except ftplib.Error as e:
+            raise ValueError("Error retrieving urls %s: %s" % (url, e))
+
+
+def get_page(url):
+    """Download a web page (http/ftp) into a string"""
+    from io import BytesIO
+
+    tf = BytesIO()
+    download_file(url, tf)
+    tf.seek(0, 0)
+    return tf.read().decode("utf-8")
+
+
+def download_file_and_gunzip(url, unzipped_filename):
+    import shutil
+    import gzip
+    import tempfile
+
+    tf = tempfile.NamedTemporaryFile(suffix=".gz")
+    download_file(url, tf)
+    tf.flush()
+
+    with gzip.GzipFile(tf.name, "rb") as gz_in:
+        with open(unzipped_filename, "wb") as op:
+            shutil.copyfileobj(gz_in, op)
+
+
+def write_md5_sum(filepath):
+    """Create filepath.md5sum with the md5 hexdigest"""
+    from pypipegraph.util import checksum_file
+
+    md5sum = checksum_file(filepath)
+    (filepath.with_name(filepath.name + ".md5sum")).write_text(md5sum)

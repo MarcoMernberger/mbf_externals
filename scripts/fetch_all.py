@@ -35,4 +35,4 @@ if __name__ == "__main__":
     mbf_externals.change_global_store(store)
     for sc in mbf_externals.ExternalAlgorithm.__subclasses__():
         if hasattr(sc, 'fetch_latest_version'):
-            sc(version='fetching').fetch_latest_version()
+            sc(version='_fetching').fetch_latest_version()
