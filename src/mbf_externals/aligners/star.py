@@ -16,18 +16,8 @@ class STAR(Aligner):
     def multi_core(self):
         return True
 
-    def build_cmd(self, output_dir, ncores, arguments):
-        if (
-            not isinstance(arguments, list)
-            or len(arguments) < 2
-            or arguments[0] != "FROM_STAR"
-        ):
-            raise ValueError(
-                "Please call one of the following functions instead: Subread().align, subread.buildindex"
-                + str(arguments)
-            )
-        arguments.extend(["--runThreadN", str(ncores)])
-        return arguments[1:]
+    def _aligner_build_cmd(self, output_dir, ncores, arguments):
+        return arguments + ["--runThreadN", str(ncores)]
 
     def align_job(
         self,
@@ -38,7 +28,7 @@ class STAR(Aligner):
         parameters,
     ):
         cmd = [
-            "FROM_STAR",
+            "FROM_ALIGNER",
             str(
                 self.path
                 / f"STAR-{self.version}"
@@ -91,7 +81,7 @@ class STAR(Aligner):
                 "STAR needs a gtf input file to calculate splice junctions"
             )
         cmd = [
-            "FROM_STAR",
+            "FROM_ALIGNER",
             self.path / f"STAR-{self.version}" / "bin" / "Linux_x86_64_static" / "STAR",
             "--runMode",
             "genomeGenerate",

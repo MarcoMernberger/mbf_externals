@@ -16,20 +16,11 @@ class Subread(Aligner):
     def multi_core(self):
         return True
 
-    def build_cmd(self, output_dir, ncores, arguments):
-        if (
-            not isinstance(arguments, list)
-            or len(arguments) < 2
-            or arguments[0] != "FROM_SUBREAD"
-        ):
-            raise ValueError(
-                "Please call one of the following functions instead: Subread().align, subread.buildindex"
-                + str(arguments)
-            )
-        if "subread-align" in arguments[1]:
-            return arguments[1:] + ["-T", str(ncores)]
+    def _aligner_build_cmd(self, output_dir, ncores, arguments):
+        if "subread-align" in arguments[0]:
+            return arguments + ["-T", str(ncores)]
         else:
-            return arguments[1:]
+            return arguments
 
     def align_job(
         self,
@@ -48,7 +39,7 @@ class Subread(Aligner):
             input_type = "0"
         output_bam_filename = Path(output_bam_filename)
         cmd = [
-            "FROM_SUBREAD",
+            "FROM_ALIGNER",
             str(
                 self.path
                 / f"subread-{self.version}-Linux-x86_64"
@@ -62,7 +53,7 @@ class Subread(Aligner):
             "-B",
             "%i" % parameters.get("max_mapping_locations", 1),
             "-i",
-            (Path(index_basename)).absolute(),
+            (Path(index_basename) / 'subread_index').absolute(),
             "-r",
             Path(input_fastq).absolute(),
             "-o",
@@ -78,7 +69,7 @@ class Subread(Aligner):
 
     def build_index_func(self, fasta_files, gtf_input_filename, output_fileprefix):
         cmd = [
-            "FROM_SUBREAD",
+            "FROM_ALIGNER",
             str(
                 self.path
                 / f"subread-{self.version}-Linux-x86_64"

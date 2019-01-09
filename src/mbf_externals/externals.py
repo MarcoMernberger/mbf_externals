@@ -162,7 +162,9 @@ class ExternalAlgorithm(ABC):
                 if call_afterwards is not None:
                     call_afterwards()
             else:
-                raise ValueError(f"{self.name} run failed. Error was: {ok}")
+                raise ValueError(
+                    f"{self.name} run failed. Error was: {ok}. Cmd was: {cmd}"
+                )
 
         return do_run
 

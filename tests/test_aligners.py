@@ -2,6 +2,7 @@ from pathlib import Path
 import pytest
 from mbf_externals.aligners.subread import Subread
 from mbf_externals.aligners.star import STAR
+from mbf_externals.aligners.bowtie import Bowtie
 
 
 class TestSubread:
@@ -15,7 +16,7 @@ class TestSubread:
         align_job = s.align_job(
             data_path / "sample.fastq",
             None,
-            index_name / "subread_index",
+            index_name,
             "out/out.bam",
             {"input_type": "dna"},
         )
@@ -36,18 +37,12 @@ class TestSubread:
         index_name = Path("subread_index_dir/srf")
         s = Subread()
         with pytest.raises(ValueError):
-            s.align_job(
-                data_path / "sample.fastq",
-                None,
-                index_name / "subread_index",
-                "out/out.bam",
-                {},
-            )
+            s.align_job(data_path / "sample.fastq", None, index_name, "out/out.bam", {})
         with pytest.raises(ValueError):
             s.align_job(
                 data_path / "sample.fastq",
                 None,
-                index_name / "subread_index",
+                index_name,
                 "out/out.bam",
                 {"input_type": "shu"},
             )
@@ -74,7 +69,7 @@ class TestSubread:
         align_job = s.align_job(
             data_path / "sample_R1_.fastq",
             data_path / "sample_R2_.fastq",
-            index_name / "subread_index",
+            index_name,
             "out/out.bam",
             {"input_type": "rna"},
         )
@@ -151,3 +146,46 @@ class TestSTAR:
             )
         with pytest.raises(ValueError):
             s.build_index_job(data_path / "genome.fasta", None, index_name)
+
+
+class TestBowtie:
+    def test_build_and_align(self, new_pipeline, global_store):
+        new_pipeline.quiet = False
+        s = Bowtie()
+        s.fetch_latest_version()
+        data_path = Path(__file__).parent / "sample_data"
+        index_name = Path("bowtie/srf")
+        build_job = s.build_index_job(
+            data_path / "genome.fasta", data_path / "genes.gtf", index_name
+        )
+        align_job = s.align_job(
+            data_path / "sample.fastq",
+            None,
+            index_name,
+            "out/out.bam",
+            parameters={"-k": "2"},
+        )
+        align_job.depends_on(build_job)
+        new_pipeline.run()
+        assert (Path("out") / "out.bam").exists()
+        assert "'-k', '2'" in (Path("out") / "cmd.txt").read_text()
+
+    def test_build_and_align_paired_end(self, new_pipeline, global_store):
+        new_pipeline.quiet = False
+        s = Bowtie()
+        s.fetch_latest_version()
+        data_path = Path(__file__).parent / "sample_data"
+        index_name = Path("bowtie/srf")
+        build_job = s.build_index_job(
+            [data_path / "genome.fasta"], data_path / "genes.gtf", index_name
+        )
+        align_job = s.align_job(
+            data_path / "sample_R1_.fastq",
+            data_path / "sample_R2_.fastq",
+            index_name,
+            "out/out.bam",
+            parameters={},
+        )
+        align_job.depends_on(build_job)
+        new_pipeline.run()
+        assert (Path("out") / "out.bam").exists()

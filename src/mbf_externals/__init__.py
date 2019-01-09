@@ -6,6 +6,7 @@ from .externals import (
 )
 from .fastq import FASTQC
 from .prebuild import PrebuildManager
+from .import aligners
 
 all = [
     ExternalAlgorithm,
@@ -14,4 +15,5 @@ all = [
     change_global_store,
     virtual_env_store,
     PrebuildManager,
+    aligners,
 ]
