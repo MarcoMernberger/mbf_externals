@@ -6,8 +6,8 @@ from mbf_externals.aligners.bowtie import Bowtie
 
 
 class TestSubread:
-    def test_build_and_align(self, new_pipeline, global_store):
-        new_pipeline.quiet = False
+    def test_build_and_align(self, new_pipegraph, global_store):
+        new_pipegraph.quiet = False
         s = Subread()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -21,10 +21,10 @@ class TestSubread:
             {"input_type": "dna"},
         )
         align_job.depends_on(build_job)
-        new_pipeline.run()
+        new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
 
-    def test_build_index(self, new_pipeline):
+    def test_build_index(self, new_pipegraph):
         s = Subread()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -32,7 +32,7 @@ class TestSubread:
         assert Path("shu/stdout.txt").exists()
         assert Path("shu/subread_index.reads").exists()
 
-    def test_raises_on_invalid_input_type(self, new_pipeline):
+    def test_raises_on_invalid_input_type(self, new_pipegraph):
         data_path = Path(__file__).parent / "sample_data"
         index_name = Path("subread_index_dir/srf")
         s = Subread()
@@ -47,20 +47,20 @@ class TestSubread:
                 {"input_type": "shu"},
             )
 
-    def test_cant_call_subread_run(self, new_pipeline):
+    def test_cant_call_subread_run(self, new_pipegraph):
         s = Subread()
         s.run("out", None)
         with pytest.raises(ValueError):
-            new_pipeline.run()
+            new_pipegraph.run()
 
-    def test_cant_call_subread_run2(self, new_pipeline):
+    def test_cant_call_subread_run2(self, new_pipegraph):
         s = Subread()
         s.run("out", ["subread-align", "something"])
         with pytest.raises(ValueError):
-            new_pipeline.run()
+            new_pipegraph.run()
 
-    def test_build_and_align_paired_end(self, new_pipeline, global_store):
-        new_pipeline.quiet = False
+    def test_build_and_align_paired_end(self, new_pipegraph, global_store):
+        new_pipegraph.quiet = False
         s = Subread()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -74,10 +74,10 @@ class TestSubread:
             {"input_type": "rna"},
         )
         align_job.depends_on(build_job)
-        new_pipeline.run()
+        new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
 
-    def test_get_index_version_range(self, new_pipeline):
+    def test_get_index_version_range(self, new_pipegraph):
         s = Subread(version="1.4.3-p1")
         assert s.get_index_version_range() == ("0.1", "1.5.99")
         s = Subread(version="1.6.3")
@@ -85,8 +85,8 @@ class TestSubread:
 
 
 class TestSTAR:
-    def test_build_and_align(self, new_pipeline, global_store):
-        new_pipeline.quiet = False
+    def test_build_and_align(self, new_pipegraph, global_store):
+        new_pipegraph.quiet = False
         s = STAR()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -102,12 +102,12 @@ class TestSTAR:
             parameters={"--runRNGseed": "5555"},
         )
         align_job.depends_on(build_job)
-        new_pipeline.run()
+        new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
         assert "'--runRNGseed', '5555'" in (Path("out") / "cmd.txt").read_text()
 
-    def test_build_and_align_paired_end(self, new_pipeline, global_store):
-        new_pipeline.quiet = False
+    def test_build_and_align_paired_end(self, new_pipegraph, global_store):
+        new_pipegraph.quiet = False
         s = STAR()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -123,17 +123,17 @@ class TestSTAR:
             parameters={"--runRNGseed": "5555"},
         )
         align_job.depends_on(build_job)
-        new_pipeline.run()
+        new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
         assert "'--runRNGseed', '5555'" in (Path("out") / "cmd.txt").read_text()
 
-    def test_cant_call_star_run(self, new_pipeline):
+    def test_cant_call_star_run(self, new_pipegraph):
         s = STAR()
         s.run("out", None)
         with pytest.raises(ValueError):
-            new_pipeline.run()
+            new_pipegraph.run()
 
-    def test_build_raises_on_multiple_fasta(self, new_pipeline):
+    def test_build_raises_on_multiple_fasta(self, new_pipegraph):
         s = STAR()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -149,8 +149,8 @@ class TestSTAR:
 
 
 class TestBowtie:
-    def test_build_and_align(self, new_pipeline, global_store):
-        new_pipeline.quiet = False
+    def test_build_and_align(self, new_pipegraph, global_store):
+        new_pipegraph.quiet = False
         s = Bowtie()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -166,12 +166,12 @@ class TestBowtie:
             parameters={"-k": "2"},
         )
         align_job.depends_on(build_job)
-        new_pipeline.run()
+        new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
         assert "'-k', '2'" in (Path("out") / "cmd.txt").read_text()
 
-    def test_build_and_align_paired_end(self, new_pipeline, global_store):
-        new_pipeline.quiet = False
+    def test_build_and_align_paired_end(self, new_pipegraph, global_store):
+        new_pipegraph.quiet = False
         s = Bowtie()
         s.fetch_latest_version()
         data_path = Path(__file__).parent / "sample_data"
@@ -187,5 +187,5 @@ class TestBowtie:
             parameters={},
         )
         align_job.depends_on(build_job)
-        new_pipeline.run()
+        new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()

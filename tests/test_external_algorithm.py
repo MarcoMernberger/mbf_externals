@@ -48,11 +48,11 @@ class SelfFetchingAlgorithm(ExternalAlgorithm):
 
 
 class TestExternalStore:
-    def test_get_versions(self, local_store, new_pipeline):
+    def test_get_versions(self, local_store, new_pipegraph):
         assert local_store.get_available_versions("dummy") == ["0.1", "0.2", "0.10"]
         assert local_store.get_available_versions("another_dummy") == ["0.2"]
 
-    def test_unpack_version(self, local_store, new_pipeline):
+    def test_unpack_version(self, local_store, new_pipegraph):
         local_store.unpack_version("dummy", "0.1")
         assert (local_store.unpack_path / "dummy" / "0.1" / "unpack_done.txt").exists()
         assert (local_store.unpack_path / "dummy" / "0.1" / "dummy.sh").exists()
@@ -84,10 +84,10 @@ class TestExternalStore:
         with pytest.raises(ValueError):
             local_store.unpack_version("nosuchalgorithm", "0.15")
 
-    def test_algo_get_latest(self, new_pipeline):
+    def test_algo_get_latest(self, new_pipegraph):
         algo = DummyAlgorithm(version="_latest")
         assert algo.version == "0.10"
-        job = algo.run(new_pipeline.result_dir / "dummy_output")
+        job = algo.run(new_pipegraph.result_dir / "dummy_output")
         assert job.cores_needed == -1
         ppg.util.global_pipegraph.run()
         assert Path(job.filenames[0]).exists()
@@ -96,12 +96,12 @@ class TestExternalStore:
         ).read_text() == "hello world10\n"
         assert (Path(job.filenames[0]).parent / "stderr.txt").read_text() == ""
 
-    def test_algo_get_auto_from_scratch(self, new_pipeline):
+    def test_algo_get_auto_from_scratch(self, new_pipegraph):
         algo = DummyAlgorithm(version="_last_used")
         assert algo.version == "0.10"
         assert Path(".mbf_external_versions").read_text() == "dummy==0.10\n"
 
-    def test_algo_get_auto_from_after_pull(self, new_pipeline):
+    def test_algo_get_auto_from_after_pull(self, new_pipegraph):
         algo = DummyAlgorithm(version="0.2")
         assert algo.version == "0.2"
         assert Path(".mbf_external_versions").read_text() == "dummy==0.2\n"
@@ -116,17 +116,17 @@ class TestExternalStore:
             Path(".mbf_external_versions").read_text() == "dummy==0.10\nwhatever==0.1\n"
         )
 
-    def test_algo_get_specific(self, new_pipeline):
+    def test_algo_get_specific(self, new_pipegraph):
         algo = DummyAlgorithm("0.2")
         assert algo.version == "0.2"
 
-    def test_algo_get_non_existant(self, new_pipeline):
+    def test_algo_get_non_existant(self, new_pipegraph):
         with pytest.raises(ValueError):
             DummyAlgorithm("0.2nsv")
 
-    def test_passing_arguments(self, new_pipeline):
+    def test_passing_arguments(self, new_pipegraph):
         algo = WhateverAlgorithm()
-        job = algo.run(new_pipeline.result_dir / "whatever_output", 0)
+        job = algo.run(new_pipegraph.result_dir / "whatever_output", 0)
         assert job.cores_needed == 1
         ppg.util.global_pipegraph.run()
         assert Path(job.filenames[0]).exists()
@@ -139,16 +139,16 @@ class TestExternalStore:
             ]
         )
 
-    def test_passing_arguments_and_returncode_issues(self, new_pipeline):
+    def test_passing_arguments_and_returncode_issues(self, new_pipegraph):
         algo = WhateverAlgorithm()
-        job = algo.run(new_pipeline.result_dir / "whatever_output", 1)
+        job = algo.run(new_pipegraph.result_dir / "whatever_output", 1)
         with pytest.raises(ppg.RuntimeError):
             ppg.util.global_pipegraph.run()
         assert not Path(job.filenames[0]).exists()
         assert (Path(job.filenames[0]).parent / "stdout.txt").read_text() == "was 1\n"
         assert (Path(job.filenames[0]).parent / "stderr.txt").read_text() == ""
 
-    def test_fetching(self, local_store, new_pipeline):
+    def test_fetching(self, local_store, new_pipegraph):
         tf = local_store.zip_path / "fetchme__funny_funny__version.tar.gz"
         if tf.exists():
             tf.unlink()
@@ -170,7 +170,7 @@ class TestUtils:
         with pytest.raises(ValueError):
             get_page("ftp://ftp.ensembl.org/pub/release-77/doesnotexist")
 
-    def test_download_file_and_gunzip(self, new_pipeline):
+    def test_download_file_and_gunzip(self, new_pipegraph):
         from mbf_externals.util import download_file_and_gunzip
 
         download_file_and_gunzip(

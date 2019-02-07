@@ -50,6 +50,7 @@ class Aligner(ExternalAlgorithm):
         )
         if self.multi_core:
             job.cores_needed = -1
+        job.index_path = output_fileprefix
         return job
 
     def build_index(self, fasta_files, gtf_input_filename, output_fileprefix):

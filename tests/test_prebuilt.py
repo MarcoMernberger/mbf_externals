@@ -6,8 +6,8 @@ from mbf_externals.util import UpstreamChangedError
 
 
 class TestPrebuilt:
-    def test_simple(self, new_pipeline):
-        new_pipeline.quiet = False
+    def test_simple(self, new_pipegraph):
+        new_pipegraph.quiet = False
         Path("prebuilt").mkdir()
         mgr = PrebuildManager("prebuilt", "test_host")
         input_files = [Path("one"), Path("two")]
@@ -34,7 +34,7 @@ class TestPrebuilt:
         assert Path("shu").read_text() == "hello\nworld0"
 
         # no rerunning.
-        new_pipeline = new_pipeline.new_pipeline()
+        new_pipegraph = new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild("dummy", "0.1", input_files, output_files, calc)
         ppg.FileGeneratingJob(
             "shu",
@@ -45,7 +45,7 @@ class TestPrebuilt:
         assert Path("shu").read_text() == "hello\nworld0"
 
         # no rerunning, getting from second path...
-        new_pipeline = new_pipeline.new_pipeline()
+        new_pipegraph = new_pipegraph.new_pipegraph()
         mgr = PrebuildManager("prebuilt", "test_host2")
         assert not Path("prebuilt/test_host2/dummy/0.1/").exists()
         jobA = mgr.prebuild("dummy", "0.1", input_files, output_files, calc)
@@ -60,7 +60,7 @@ class TestPrebuilt:
         assert Path("shu2").read_text() == "hello\nworld0"
 
         # changes to the input files, same machine -> explode.
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         mgr = PrebuildManager("prebuilt", "test_host")
         input_files[1].write_text("world!")
         jobA = mgr.prebuild("dummy", "0.1", input_files, output_files, calc)
@@ -74,7 +74,7 @@ class TestPrebuilt:
         assert Path("prebuilt/test_host/dummy/0.1/outA").read_text() == "hello\nworld0"
 
         # changes to the input files, different machine -> explode.
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         mgr = PrebuildManager("prebuilt", "test_host2")
         input_files[1].write_text("world!")
         jobA = mgr.prebuild("dummy", "0.1", input_files, output_files, calc)
@@ -88,7 +88,7 @@ class TestPrebuilt:
         assert Path("prebuilt/test_host/dummy/0.1/outA").read_text() == "hello\nworld0"
 
         # but new version is ok...
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         mgr = PrebuildManager("prebuilt", "test_host")
         jobA = mgr.prebuild("dummy", "0.2", input_files, output_files, calc)
         ppg.FileGeneratingJob(
@@ -100,7 +100,7 @@ class TestPrebuilt:
         assert Path("shu3").read_text() == "hello\nworld!1"
 
         # request same files with minimum_acceptable_version-> no rebuild...
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "dummy",
             "0.3",
@@ -117,7 +117,7 @@ class TestPrebuilt:
         assert Path("shu4").read_text() == "hello\nworld!1"
 
         # but with minimum = version, and only older available -> rebuild
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "dummy",
             "0.3",
@@ -134,7 +134,7 @@ class TestPrebuilt:
         assert Path("shu5").read_text() == "hello\nworld!2"
 
         # changing the function leads to an exception
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         mgr = PrebuildManager("prebuilt", "test_host")
 
         def calc2(output_path):
@@ -159,7 +159,7 @@ class TestPrebuilt:
             ppg.util.global_pipegraph.run()
 
         # this is also true if it was previously build on another machine
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         mgr = PrebuildManager("prebuilt", "test_host2")
 
         def calc2(output_path):
@@ -184,7 +184,7 @@ class TestPrebuilt:
             ppg.util.global_pipegraph.run()
 
         # but going back to the original -> ok
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         mgr = PrebuildManager("prebuilt", "test_host2")
 
         def calc3(output_path):
@@ -210,7 +210,7 @@ class TestPrebuilt:
             Path("shu5").read_text() == "hello\nworld!2"
         )  # not rerun, neither the function nor the input files changed
 
-    def test_chained(self, new_pipeline):
+    def test_chained(self, new_pipegraph):
         Path("prebuilt").mkdir()
         mgr = PrebuildManager("prebuilt", "test_host")
 
@@ -227,7 +227,7 @@ class TestPrebuilt:
         ppg.util.global_pipegraph.run()
         assert jobB.find_file("B").read_text() == "hello world"
 
-    def test_chained2(self, new_pipeline):
+    def test_chained2(self, new_pipegraph):
         Path("prebuilt").mkdir()
         count_file = Path("count")
         count_file.write_text("0")
@@ -243,7 +243,7 @@ class TestPrebuilt:
         assert jobA.find_file("A").read_text() == "hello"
         assert count_file.read_text() == "1"
 
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
 
         def calc_b(output_path):
             (output_path / "B").write_text(jobA.find_file("A").read_text() + " world")
@@ -256,7 +256,7 @@ class TestPrebuilt:
         assert jobB.find_file("B").read_text() == "hello world"
         assert count_file.read_text() == "1"
 
-    def test_mixed_state_raises(self, new_pipeline):
+    def test_mixed_state_raises(self, new_pipegraph):
         Path("prebuilt").mkdir()
         mgr = PrebuildManager("prebuilt", "test_host")
 
@@ -269,7 +269,7 @@ class TestPrebuilt:
         with pytest.raises(ValueError):
             ppg.util.global_pipegraph.run()
 
-    def test_prebuilt_job_raises_on_non_iterable(self, new_pipeline):
+    def test_prebuilt_job_raises_on_non_iterable(self, new_pipegraph):
         from mbf_externals.prebuild import PrebuildJob
 
         with pytest.raises(TypeError):
@@ -279,7 +279,7 @@ class TestPrebuilt:
         with pytest.raises(ValueError):
             PrebuildJob([Path("shu").absolute()], lambda: 5, "shu")
 
-    def test_minimal_and_maximal_versions(self, new_pipeline):
+    def test_minimal_and_maximal_versions(self, new_pipegraph):
         Path("prebuilt").mkdir()
         count_file = Path("count")
         count_file.write_text("0")
@@ -317,7 +317,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "1"
 
         # no rerun here
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.5",
@@ -338,7 +338,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "1"
 
         # no rerun on I want this exact version
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.5",
@@ -359,7 +359,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "1"
 
         # but we don't have this one
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         ppg.util.global_pipegraph.quiet = False
         jobA = mgr.prebuild(
             "partA",
@@ -381,7 +381,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "2"
 
         # again no rerun
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.6",
@@ -403,7 +403,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "2"
 
         # get an older one
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.4",
@@ -424,7 +424,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "3"
 
         # you want 0.4-.. you get' the 0.6
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.7",
@@ -446,7 +446,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "3"  # no rerun of the build
 
         # you want 0.4-.. but you changed the build func -> 0.7
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.7",
@@ -469,7 +469,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "4"
 
         # you want 0.5 min, with an 05 build func, you get 0.5 - and a rerun
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.5",
@@ -491,7 +491,7 @@ class TestPrebuilt:
         assert count_file.read_text() == "4"
 
         # and at last, we want 0.5
-        new_pipeline.new_pipeline()
+        new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
             "0.5",

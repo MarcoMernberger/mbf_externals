@@ -81,7 +81,7 @@ class PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
             old = self.find_matching_renamed(all_invariant_stati)
         checksums = self.calc_checksums(old)
         if old is False:
-            raise ppg.util.NothingChanged(checksums)
+            raise ppg.ppg_exceptions.NothingChanged(checksums)
         # elif old is None: # not sure when this would ever happen
         # return checksums
         else:
@@ -96,7 +96,7 @@ File: %s"""
                         % (self, fn)
                     )
                     # return checksums
-            raise ppg.util.NothingChanged(checksums)
+            raise ppg.ppg_exceptions.NothingChanged(checksums)
 
 
 class PrebuildJob(ppg.MultiFileGeneratingJob):
@@ -127,11 +127,12 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
 
         def calc():
             self.real_callback(output_path)
-            self.filenames[-1].write_text(str(time.time()))
-            for fn in output_files:
-                write_md5_sum(fn)
+            output_files[-1].write_text(str(time.time()))
+            for fn in output_files[:-1]:
+                if os.path.exists(fn):
+                    write_md5_sum(fn)
 
-        super().__init__(output_files, calc, rename_broken=True, empty_files_ok=True)
+        super().__init__(output_files, calc, rename_broken=True, empty_ok=True)
         self.output_path = output_path
 
     def inject_auto_invariants(self):
@@ -151,8 +152,18 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
             )
         self.was_invalidated = True
 
-    def find_file(self, output_filename):
+    def name_file(self, output_filename):
+        """Adjust path of output_filename by job path"""
         return self.output_path / output_filename
+
+    def find_file(self, output_filename):
+        """Search for a file named output_filename in the job's known created files"""
+        of = self.name_file(output_filename)
+        for fn in self.filenames:
+            if of.resolve() == Path(fn).resolve():
+                return of
+        else:
+            raise KeyError("file not found: %s" % output_filename)
 
 
 class PrebuildManager:
