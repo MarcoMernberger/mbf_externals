@@ -1,6 +1,5 @@
 from pathlib import Path
 import time
-import os
 import subprocess
 from abc import ABC, abstractmethod
 import pypipegraph as ppg
@@ -189,7 +188,10 @@ class ExternalAlgorithmStore:
             not algorithm_name in self._version_cache
             or not self._version_cache[algorithm_name]
         ):
-            matching = self.zip_path.glob(f"{algorithm_name}__*.tar.gz")
+            glob = f"{algorithm_name}__*.tar.gz"
+            print(glob, self.zip_path)
+            matching = list(self.zip_path.glob(glob))
+            print(matching)
             versions = [x.stem[x.stem.find("__") + 2 : -4] for x in matching]
             self._version_cache[algorithm_name] = sort_versions(versions)
         return self._version_cache[algorithm_name]
@@ -211,15 +213,3 @@ class ExternalAlgorithmStore:
 
     def get_zip_file_path(self, algorithm_name, version):
         return self.zip_path / (algorithm_name + "__" + version + ".tar.gz")
-
-
-def virtual_env_store():
-    zipped = Path(os.environ["VIRTUAL_ENV"]) / "mbf_store" / "zip"
-    unpacked = Path(os.environ["VIRTUAL_ENV"]) / "mbf_store" / "unpack"
-    zipped.mkdir(exist_ok=True, parents=True)
-    unpacked.mkdir(exist_ok=True, parents=True)
-    change_global_store(ExternalAlgorithmStore(zipped, unpacked))
-
-
-if "VIRTUAL_ENV" in os.environ:
-    virtual_env_store()

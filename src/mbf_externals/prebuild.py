@@ -241,3 +241,8 @@ class PrebuildManager:
         job.depends_on(PrebuildFileInvariantsExploding(output_path, input_files))
         job.version = version
         return job
+
+
+def change_global_manager(new_manager):
+    global _global_manager
+    _global_manager = new_manager

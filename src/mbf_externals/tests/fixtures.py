@@ -7,11 +7,12 @@ import shutil
 def local_store():
     from mbf_externals import ExternalAlgorithmStore, change_global_store
 
-    unpacked = Path(__file__).parent / "unpacked"
+    base = Path(__file__).parent.parent.parent.parent / "tests"
+    unpacked = base / "unpacked"
     if unpacked.exists():
         shutil.rmtree(unpacked)
     unpacked.mkdir()
-    store = ExternalAlgorithmStore(Path(__file__).parent / "zipped", unpacked)
+    store = ExternalAlgorithmStore(base / "zipped", unpacked)
     change_global_store(store)
     yield store
     if unpacked.exists():
@@ -20,7 +21,7 @@ def local_store():
 
 @pytest.fixture(scope="class")
 def global_store():
-    from mbf_externals import virtual_env_store
+    from mbf_externals import create_defaults
 
-    store = virtual_env_store()
+    store = create_defaults()
     yield store
