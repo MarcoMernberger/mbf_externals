@@ -13,6 +13,10 @@ def change_global_store(new_store):
     _global_store = new_store
 
 
+def get_global_store():
+    return _global_store
+
+
 class ExternalAlgorithm(ABC):
     """Together with an ExternalAlgorithmStore (or the global one),
     ExternalAlgorithm encapsulates a callable algorithm such as a high throughput aligner.

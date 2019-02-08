@@ -30,7 +30,7 @@ class Bowtie(Aligner):
         cmd = [
             "FROM_ALIGNER",
             self.path / f"bowtie-{self.version}-linux-x86_64" / "bowtie",
-            (Path(index_basename) / 'bowtie_index').absolute(),
+            (Path(index_basename) / "bowtie_index").absolute(),
             "-S",
         ]
         if paired_end_filename:
@@ -75,13 +75,13 @@ class Bowtie(Aligner):
     def build_index_func(self, fasta_files, gtf_input_filename, output_fileprefix):
         if isinstance(fasta_files, (str, Path)):
             fasta_files = [fasta_files]
-        if len(fasta_files) > 1:
+        if len(fasta_files) > 1:  # pragma: no cover
             raise ValueError("Bowtie can only build from a single fasta")
         cmd = [
             "FROM_ALIGNER",
             self.path / f"bowtie-{self.version}-linux-x86_64" / "bowtie-build",
             ",".join([str(Path(x).absolute()) for x in fasta_files]),
-            (Path(output_fileprefix) / 'bowtie_index').absolute(),
+            (Path(output_fileprefix) / "bowtie_index").absolute(),
             "--seed",
             "123123",
         ]

@@ -9,7 +9,7 @@ def local_store():
 
     base = Path(__file__).parent.parent.parent.parent / "tests"
     unpacked = base / "unpacked"
-    if unpacked.exists():
+    if unpacked.exists():  # pragma: no cover
         shutil.rmtree(unpacked)
     unpacked.mkdir()
     store = ExternalAlgorithmStore(base / "zipped", unpacked)

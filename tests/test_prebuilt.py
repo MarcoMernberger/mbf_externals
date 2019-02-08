@@ -86,6 +86,8 @@ class TestPrebuilt:
             ppg.util.global_pipegraph.run()
         assert not Path("shu3").exists()
         assert Path("prebuilt/test_host/dummy/0.1/outA").read_text() == "hello\nworld0"
+        with pytest.raises(KeyError):
+            jobA.find_file("not_found")
 
         # but new version is ok...
         new_pipegraph.new_pipegraph()

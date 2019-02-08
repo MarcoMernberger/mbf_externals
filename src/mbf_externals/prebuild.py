@@ -179,7 +179,7 @@ class PrebuildManager:
             for p in self.prebuilt_path.glob("*")
             if (p / name).exists() and p.name != self.hostname
         ]
-        # prefer versions from this host.
+        # prefer versions from this host - must be last!
         dirs_to_consider.append(self.prebuilt_path / self.hostname)
         for p in dirs_to_consider:
             for v in (p / name).glob("*"):
@@ -243,6 +243,13 @@ class PrebuildManager:
         return job
 
 
+_global_manager = None
+
+
 def change_global_manager(new_manager):
     global _global_manager
     _global_manager = new_manager
+
+
+def get_global_manager():
+    return _global_manager

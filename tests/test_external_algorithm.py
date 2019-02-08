@@ -205,3 +205,52 @@ class TestUtils:
         assert repr(Version("1.5")) == 'Version("1.5")'
         assert Version("1.5.0") < Version("1.6")
         assert Version("1.6.0") > Version("1.5.99.shu")
+
+
+def test_create_defaults(new_pipegraph):
+    import os
+    import socket
+    import shutil
+    from mbf_externals import create_defaults, get_global_manager, get_global_store
+
+    org_environ = os.environ.copy()
+    try:
+        for k in "VIRTUAL_ENV", "MBF_EXTERNAL_PREBUILD_PATH", "MBF_EXTERNAL_HOSTNAME":
+            if k in os.environ:
+                del os.environ[k]
+            os.environ["VIRTUAL_ENV"] = "fakevirt"
+        Path("fakevirt").mkdir()
+        create_defaults()
+        gs = get_global_store()
+        assert gs.zip_path == Path("fakevirt") / "mbf_store" / "zip"
+        assert gs.unpack_path == Path("fakevirt") / "mbf_store" / "unpack"
+        gm = get_global_manager()
+        assert gm.prebuilt_path.absolute() == (Path(".") / "prebuilt").absolute()
+        assert (Path(".") / "prebuilt" / socket.gethostname()).exists()
+
+        del os.environ["VIRTUAL_ENV"]
+        shutil.rmtree("fakevirt")
+        Path("fakevirt").mkdir()
+        os.environ["MBF_EXTERNAL_PREBUILD_PATH"] = "fakevirt"
+        with pytest.raises(KeyError):
+            create_defaults()
+        os.environ["MBF_EXTERNAL_HOSTNAME"] = "myname"
+        with pytest.raises(ValueError):
+            create_defaults()
+        Path("fakevirt/myname").mkdir()
+        create_defaults()
+        gs = get_global_store()
+        assert gs.zip_path == Path("fakevirt") / "myname" / "mbf_store" / "zip"
+        assert gs.unpack_path == Path("fakevirt") / "myname" / "mbf_store" / "unpack"
+        gm = get_global_manager()
+        assert gm.prebuilt_path == Path("fakevirt")
+        shutil.rmtree("fakevirt")
+        del os.environ["MBF_EXTERNAL_PREBUILD_PATH"]
+        del os.environ["MBF_EXTERNAL_HOSTNAME"]
+
+        create_defaults()
+        assert get_global_manager() is None
+        assert get_global_store() is None
+
+    finally:
+        os.environ = org_environ
