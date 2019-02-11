@@ -47,7 +47,9 @@ def create_defaults():
     change_global_manager(PrebuildManager(prebuild_path, hostname))
 
 
+print('import')
 create_defaults()
+print(get_global_manager())
 
 __all__ = [
     ExternalAlgorithm,

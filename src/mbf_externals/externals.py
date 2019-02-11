@@ -103,7 +103,14 @@ class ExternalAlgorithm(ABC):
     def multi_core(self):
         return False
 
-    def run(self, output_directory, arguments=None, cwd=None, call_afterwards=None):
+    def run(
+        self,
+        output_directory,
+        arguments=None,
+        cwd=None,
+        call_afterwards=None,
+        additional_files_created=None,
+    ):
         """Return a job that runs the algorithm and puts the
         results in output_directory.
         Note that assigning different ouput_directories to different
@@ -112,9 +119,14 @@ class ExternalAlgorithm(ABC):
         output_directory = Path(output_directory)
         output_directory.mkdir(parents=True, exist_ok=True)
         sentinel = output_directory / "sentinel.txt"
+        filenames = [sentinel]
+        if additional_files_created:
+            if isinstance(additional_files_created, (str, Path)):
+                additional_files_created = [additional_files_created]
+            filenames.extend(additional_files_created)
 
-        job = ppg.FileGeneratingJob(
-            sentinel,
+        job = ppg.MultiFileGeneratingJob(
+            filenames,
             self.get_run_func(
                 output_directory, arguments, cwd=cwd, call_afterwards=call_afterwards
             ),

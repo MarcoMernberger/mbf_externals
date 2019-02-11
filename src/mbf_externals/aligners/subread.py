@@ -53,7 +53,7 @@ class Subread(Aligner):
             "-B",
             "%i" % parameters.get("max_mapping_locations", 1),
             "-i",
-            (Path(index_basename) / 'subread_index').absolute(),
+            (Path(index_basename) / "subread_index").absolute(),
             "-r",
             Path(input_fastq).absolute(),
             "-o",
@@ -61,7 +61,11 @@ class Subread(Aligner):
         ]
         if paired_end_filename:
             cmd.extend(("-R", str(Path(paired_end_filename).absolute())))
-        job = self.run(Path(output_bam_filename).parent, cmd)
+        job = self.run(
+            Path(output_bam_filename).parent,
+            cmd,
+            additional_files_created=[output_bam_filename],
+        )
         job.depends_on(
             ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))
         )

@@ -34,7 +34,7 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
             old_hash = stf.read_text()
             if old_hash != invariant_hash:
                 raise UpstreamChangedError(
-                    "Calculating function changed, bump version or rollback"
+                    "Calculating function changed, bump version or rollback, or nuke job info ( %s )" % (self.job_id, )
                 )
         else:
             stf.write_text(invariant_hash)

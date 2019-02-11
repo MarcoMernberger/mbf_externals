@@ -65,6 +65,7 @@ class STAR(Aligner):
             cmd,
             cwd=Path(output_bam_filename).parent,
             call_afterwards=rename_after_alignment,
+            additional_files_created=[output_bam_filename]
         )
         job.depends_on(
             ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))

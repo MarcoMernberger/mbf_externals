@@ -66,6 +66,7 @@ class Bowtie(Aligner):
             cmd,
             cwd=Path(output_bam_filename).parent,
             call_afterwards=sam_to_bam,
+            additional_files_created=output_bam_filename
         )
         job.depends_on(
             ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))
