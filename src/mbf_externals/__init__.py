@@ -30,7 +30,7 @@ def create_defaults():
 
         store_base = Path(os.environ["VIRTUAL_ENV"]) / "mbf_store"
         prebuild_path = (Path(".") / "prebuilt").absolute()
-        prebuild_path.mkdir()
+        prebuild_path.mkdir(exist_ok=True)
         hostname = socket.gethostname()
     else:
         # print("No defaults for mbf_externals possible")

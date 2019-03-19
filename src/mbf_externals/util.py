@@ -24,6 +24,21 @@ class lazy_property(object):
         return value
 
 
+def lazy_method(func):
+    """
+    meant to be used for lazy evaluation of an object attribute.
+    property should represent non-mutable data, as it replaces itself.
+    """
+    cache_name = "_cached_" + func.__name__
+
+    def inner(self):
+        if not hasattr(self, cache_name):
+            setattr(self, cache_name, func(self))
+        return getattr(self, cache_name)
+
+    return inner
+
+
 def sort_versions(versions):
     """Sort versions, from natsort manual:
         Sorts like this:
@@ -150,3 +165,42 @@ def write_md5_sum(filepath):
 
     md5sum = checksum_file(filepath)
     (filepath.with_name(filepath.name + ".md5sum")).write_text(md5sum)
+
+
+def to_string(s, encoding="utf-8"):
+    if isinstance(s, str):
+        return s
+    else:
+        return s.decode(encoding)
+
+
+def to_bytes(x, encoding="utf-8"):
+    """ In python3: str -> bytes. Bytes stay bytes"""
+    if isinstance(x, bytes):
+        return x
+    else:
+        return x.encode(encoding)
+
+
+def chmod(filename, mode):
+    """Chmod if possible - otherwise try to steal the file and chmod then"""
+    import os
+    import shutil
+
+    try:
+        os.chmod(filename, mode)
+    except OSError as e:
+        if (
+            str(e).find("Operation not permitted") == -1
+            and str(e).find("Permission denied") == -1
+        ):
+            raise
+        else:  # steal ownership and set the permissions...
+            t = filename + ".temp"
+            shutil.copyfile(filename, t)
+            try:
+                os.chmod(t, mode)
+            except OSError:
+                pass
+            os.unlink(filename)
+            shutil.move(t, filename)
