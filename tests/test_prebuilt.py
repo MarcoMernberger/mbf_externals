@@ -513,3 +513,21 @@ class TestPrebuilt:
         assert Path("checkme").read_text() == "0.5"
         assert jobA.version == "0.5"
         assert count_file.read_text() == "4"
+
+    def test_prebuild_job_raises_on_executing_if_dep_on_anything_not_prebuild(
+        self, new_pipegraph
+    ):
+        Path("prebuilt").mkdir()
+        count_file = Path("count")
+        count_file.write_text("0")
+        mgr = PrebuildManager("prebuilt", "test_host")
+
+        def calc_05(output_path):
+            (output_path / "A").write_text("0.5")
+            c = int(count_file.read_text())
+            count_file.write_text(str(c + 1))
+
+        jobA = mgr.prebuild("partA", "0.5", [], "A", calc_05)
+        jobA.depends_on(ppg.FunctionInvariant("shu", lambda: 5))
+        with pytest.raises(ppg.JobContractError):
+            ppg.util.global_pipegraph.run()

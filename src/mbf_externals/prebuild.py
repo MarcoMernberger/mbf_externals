@@ -16,6 +16,7 @@ import os
 
 class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
     def __init__(self, storage_filename, func):
+        self.is_prebuild = True
         super().__init__(storage_filename, func)
 
     @classmethod
@@ -34,7 +35,8 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
             old_hash = stf.read_text()
             if old_hash != invariant_hash:
                 raise UpstreamChangedError(
-                    "Calculating function changed, bump version or rollback, or nuke job info ( %s )" % (self.job_id, )
+                    "Calculating function changed, bump version or rollback, or nuke job info ( %s )"
+                    % (self.job_id,)
                 )
         else:
             stf.write_text(invariant_hash)
@@ -49,6 +51,7 @@ class PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
     def __init__(self, job_id, filenames):
         job_id = "PFIE_" + str(job_id)
         self.filenames = filenames
+        self.is_prebuild = True
         ppg.Job.__init__(self, job_id)
 
     def calc_checksums(self, old):
@@ -124,6 +127,7 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
         output_path.mkdir(parents=True, exist_ok=True)
 
         self.real_callback = calc_function
+        self.is_prebuild = True
 
         def calc():
             self.real_callback(output_path)
@@ -134,6 +138,14 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
 
         super().__init__(output_files, calc, rename_broken=True, empty_ok=True)
         self.output_path = output_path
+
+    def connected(self):
+        for j in self.prerequisites:
+            if not hasattr(j, "is_prebuild") or not j.is_prebuild:
+                raise ppg.JobContractError(
+                    "%s depended on a non-prebuild dependency %s - not supported"
+                    % (self, j)
+                )
 
     def inject_auto_invariants(self):
         self.depends_on(
