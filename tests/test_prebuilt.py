@@ -528,6 +528,8 @@ class TestPrebuilt:
             count_file.write_text(str(c + 1))
 
         jobA = mgr.prebuild("partA", "0.5", [], "A", calc_05)
-        jobA.depends_on(ppg.FunctionInvariant("shu", lambda: 5))
         with pytest.raises(ppg.JobContractError):
-            ppg.util.global_pipegraph.run()
+            jobA.depends_on(ppg.FunctionInvariant("shu", lambda: 5))
+
+    def test_depends_on_file(self):
+        aoeu

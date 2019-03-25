@@ -33,7 +33,7 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         stf = Path(self.job_id)
         if stf.exists():
             old_hash = stf.read_text()
-            if old_hash != invariant_hash:
+            if False and old_hash != invariant_hash:
                 raise UpstreamChangedError(
                     "Calculating function changed, bump version or rollback, or nuke job info ( %s )"
                     % (self.job_id,)
@@ -139,20 +139,25 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
         super().__init__(output_files, calc, rename_broken=True, empty_ok=True)
         self.output_path = output_path
 
-    def connected(self):
-        for j in self.prerequisites:
-            if not hasattr(j, "is_prebuild") or not j.is_prebuild:
+    def depends_on_func(self, name, func):
+        return PrebuildFunctionInvariantFileStoredExploding(
+            self.output_path / ("%s.md5sum" % (name,)), func
+        )
+
+    def depends_on_file(self, filename):
+        return PrebuildFileInvariantsExploding(filename, [filename])
+
+    def depends_on(self, jobs):
+        for job in ppg.util.flatten_jobs(jobs):
+            if not hasattr(job, "is_prebuild") or not job.is_prebuild:
                 raise ppg.JobContractError(
                     "%s depended on a non-prebuild dependency %s - not supported"
-                    % (self, j)
+                    % (self, job)
                 )
+        ppg.Job.depends_on(self, job)
 
     def inject_auto_invariants(self):
-        self.depends_on(
-            PrebuildFunctionInvariantFileStoredExploding(
-                self.output_path / "mbf_func.md5sum", self.real_callback
-            )
-        )
+        self.depends_on_func("mbf_func", self.real_callback)
 
     def invalidated(self, reason):
         exists = [Path(of).exists() for of in self.filenames]
