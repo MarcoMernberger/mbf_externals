@@ -258,10 +258,39 @@ class PrebuildManager:
         if isinstance(output_files, (str, Path)):
             output_files = [output_files]
         output_files = [Path(of) for of in output_files]
-        job = PrebuildJob(output_files, calculating_function, output_path)
-        job.depends_on(PrebuildFileInvariantsExploding(output_path, input_files))
-        job.version = version
-        return job
+        if ppg.inside_ppg():
+            job = PrebuildJob(output_files, calculating_function, output_path)
+            job.depends_on(PrebuildFileInvariantsExploding(output_path, input_files))
+            job.version = version
+            return job
+        else:
+            for of in output_files:
+                if not (output_path / of).exists():
+                    raise ValueError(
+                        "%s was missing and prebuild used outside of ppg - can't build it"
+                        % (output_path / of).absolute()
+                    )
+
+            class DummyJob:
+                """just enough of the Jobs interface to ignore the various calls
+                and allow finding the msgpack jobs
+                """
+                def __init__(self, filenames):
+                    self.filenames = PrebuildJob._normalize_output_files(
+                        filenames, output_path
+                    )
+                    # self.job_id = ":".join(sorted(str(x) for x in filenames))
+
+                def depends_on(self, _other_job):  # pragma: no cover
+                    pass
+
+                def depends_on_func(self,_name,  _func):  # pragma: no cover
+                    pass
+
+                def __iter__(self):
+                    yield self
+
+            return DummyJob(output_files)
 
 
 _global_manager = None
