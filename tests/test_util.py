@@ -1,4 +1,4 @@
-from mbf_externals.util import to_string, to_bytes, chmod
+from mbf_externals.util import to_string, to_bytes, chmod, lazy_method
 import os
 
 
@@ -18,10 +18,23 @@ def test_to_bytes():
 
 def test_chmod():
     import tempfile
+
     tf = tempfile.NamedTemporaryFile()
     assert not os.access(tf.name, os.X_OK)
     chmod(tf.name, 0o777)
     assert os.access(tf.name, os.X_OK)
 
+
 def test_lazy_method():
-    aoeu
+    class Shu:
+        def __init__(self):
+            self.counter = 0
+
+        @lazy_method
+        def up(self):
+            self.counter += 1
+            return self.counter
+
+    x = Shu()
+    assert x.up() == 1
+    assert x.up() == 1

@@ -140,12 +140,16 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
         self.output_path = output_path
 
     def depends_on_func(self, name, func):
-        return PrebuildFunctionInvariantFileStoredExploding(
+        job = PrebuildFunctionInvariantFileStoredExploding(
             self.output_path / ("%s.md5sum" % (name,)), func
         )
+        self.depends_on(job)
+        return job
 
     def depends_on_file(self, filename):
-        return PrebuildFileInvariantsExploding(filename, [filename])
+        job = PrebuildFileInvariantsExploding(filename, [filename])
+        self.depends_on(job)
+        return job
 
     def depends_on(self, jobs):
         for job in ppg.util.flatten_jobs(jobs):

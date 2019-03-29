@@ -532,5 +532,23 @@ class TestPrebuilt:
         with pytest.raises(ppg.JobContractError):
             jobA.depends_on(ppg.FunctionInvariant("shu", lambda: 5))
 
-    def test_depends_on_file(self):
-        aoeu
+    def test_depends_on_file(self, new_pipegraph):
+        from mbf_externals.prebuild import PrebuildFileInvariantsExploding
+        Path("prebuilt").mkdir()
+        count_file = Path("count")
+        count_file.write_text("0")
+        mgr = PrebuildManager("prebuilt", "test_host")
+
+        def calc_05(output_path):
+            (output_path / "A").write_text("0.5")
+            c = int(count_file.read_text())
+            count_file.write_text(str(c + 1))
+
+        jobA = mgr.prebuild("partA", "0.5", [], "A", calc_05)
+        jobA.depends_on_file(count_file)
+        for p in jobA.prerequisites:
+            if isinstance(p, PrebuildFileInvariantsExploding):
+                if count_file in p.filenames:
+                    break
+        else:
+            assert False
