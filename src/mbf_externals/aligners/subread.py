@@ -56,6 +56,7 @@ class Subread(Aligner):
             (Path(index_basename) / "subread_index").absolute(),
             "-r",
             Path(input_fastq).absolute(),
+            "--sortReadsByCoordinates",
             "-o",
             output_bam_filename.absolute(),
         ]
@@ -64,7 +65,7 @@ class Subread(Aligner):
         job = self.run(
             Path(output_bam_filename).parent,
             cmd,
-            additional_files_created=[output_bam_filename],
+            additional_files_created=[output_bam_filename, output_bam_filename.with_name(output_bam_filename.name + '.bai')],
         )
         job.depends_on(
             ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))
