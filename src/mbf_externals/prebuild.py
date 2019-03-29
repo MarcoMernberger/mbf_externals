@@ -33,7 +33,7 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         stf = Path(self.job_id)
         if stf.exists():
             old_hash = stf.read_text()
-            if False and old_hash != invariant_hash:
+            if old_hash != invariant_hash:
                 raise UpstreamChangedError(
                     "Calculating function changed, bump version or rollback, or nuke job info ( %s )"
                     % (self.job_id,)

@@ -159,6 +159,7 @@ class TestPrebuilt:
         ).depends_on(jobA)
         with pytest.raises(UpstreamChangedError):
             ppg.util.global_pipegraph.run()
+            raise ValueError([x.job_id for x in ppg.util.global_pipegraph.jobs.values()])
 
         # this is also true if it was previously build on another machine
         new_pipegraph.new_pipegraph()
