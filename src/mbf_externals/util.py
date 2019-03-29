@@ -100,7 +100,7 @@ def download_file(url, file_object):
     """Download an url"""
 
     if isinstance(file_object, str):
-        raise ValueError("dowload_file needs a file-object not a name")
+        raise ValueError("download_file needs a file-object not a name")
 
     if url.startswith("ftp"):
         return download_ftp(url, file_object)
