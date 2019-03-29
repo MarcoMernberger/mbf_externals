@@ -189,7 +189,7 @@ def chmod(filename, mode):
 
     try:
         os.chmod(filename, mode)
-    except OSError as e: # pragma: no cover
+    except OSError as e:  # pragma: no cover
         if (
             str(e).find("Operation not permitted") == -1
             and str(e).find("Permission denied") == -1
