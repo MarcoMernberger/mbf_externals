@@ -114,6 +114,8 @@ def download_http(url, file_object):
     import shutil
 
     r = requests.get(url, stream=True)
+    if r.status_code != 200:
+        raise ValueError("HTTP Error return: %i fetching %s" % (r.status_code, url))
     r.raw.decode_content = True
     shutil.copyfileobj(r.raw, file_object)
 
