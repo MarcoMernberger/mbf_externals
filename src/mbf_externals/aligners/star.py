@@ -65,7 +65,7 @@ class STAR(Aligner):
             cmd,
             cwd=Path(output_bam_filename).parent,
             call_afterwards=rename_after_alignment,
-            additional_files_created=[output_bam_filename]
+            additional_files_created=[output_bam_filename],
         )
         job.depends_on(
             ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))
@@ -105,3 +105,21 @@ class STAR(Aligner):
         url = f"https://github.com/alexdobin/STAR/archive/{v}.tar.gz"
         with open(target_filename, "wb") as op:
             download_file(url, op)
+
+    def get_alignment_stats(self, output_bam_filename):
+        target = Path(output_bam_filename).parent / "Log.final.out"
+        if not target.exists():
+            return {"No data found": 1}
+        else:
+            lines = target.read_text().split("\n")
+            lines = [x.split(" |", 1) for x in lines if " |" in x]
+            lookup = {x[0].strip(): x[1].strip() for x in lines}
+            result = {}
+            for k in [
+                "Number of reads mapped to too many loci",
+                "Uniquely mapped reads number",
+                "Number of reads mapped to multiple loci",
+            ]:
+                result[k] = int(lookup[k])
+            result["Unmapped"] = int(lookup["Number of input reads"]) - sum(result.values())
+            return result

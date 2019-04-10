@@ -65,7 +65,10 @@ class Subread(Aligner):
         job = self.run(
             Path(output_bam_filename).parent,
             cmd,
-            additional_files_created=[output_bam_filename, output_bam_filename.with_name(output_bam_filename.name + '.bai')],
+            additional_files_created=[
+                output_bam_filename,
+                output_bam_filename.with_name(output_bam_filename.name + ".bai"),
+            ],
         )
         job.depends_on(
             ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))
@@ -111,3 +114,14 @@ class Subread(Aligner):
         url = f"https://downloads.sourceforge.net/project/subread/subread-{version}/subread-{version}-Linux-x86_64.tar.gz"
         with open(target_filename, "wb") as op:
             download_file(url, op)
+
+    def get_alignment_stats(self, output_bam_filename):
+        import re
+
+        output_bam_filename = Path(output_bam_filename)
+        target = output_bam_filename.parent / "stderr.txt"
+        raw = target.read_text()
+        result = {}
+        for k in 'Total reads', 'Uniquely mapped', 'Unmapped':
+            result[k] = int(re.findall(f"{k} : (\\d+)", raw)[0][0])
+        return result

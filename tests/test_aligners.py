@@ -23,6 +23,11 @@ class TestSubread:
         align_job.depends_on(build_job)
         new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
+        assert s.get_alignment_stats((Path("out") / "out.bam")) == {
+            "Total reads": 1,
+            "Uniquely mapped": 1,
+            "Unmapped": 0,
+        }
 
     def test_build_index(self, new_pipegraph):
         s = Subread()
@@ -105,6 +110,12 @@ class TestSTAR:
         new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
         assert "'--runRNGseed', '5555'" in (Path("out") / "cmd.txt").read_text()
+        assert s.get_alignment_stats((Path("out") / "out.bam")) == {
+            "Number of reads mapped to multiple loci": 0,
+            "Number of reads mapped to too many loci": 0,
+            "Uniquely mapped reads number": 1,
+            "Unmapped": 0,
+        }
 
     def test_build_and_align_paired_end(self, new_pipegraph, global_store):
         new_pipegraph.quiet = False

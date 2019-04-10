@@ -275,6 +275,7 @@ class PrebuildManager:
                 """just enough of the Jobs interface to ignore the various calls
                 and allow finding the msgpack jobs
                 """
+
                 def __init__(self, filenames):
                     self.filenames = PrebuildJob._normalize_output_files(
                         filenames, output_path
@@ -284,7 +285,7 @@ class PrebuildManager:
                 def depends_on(self, _other_job):  # pragma: no cover
                     pass
 
-                def depends_on_func(self,_name,  _func):  # pragma: no cover
+                def depends_on_func(self, _name, _func):  # pragma: no cover
                     pass
 
                 def __iter__(self):
