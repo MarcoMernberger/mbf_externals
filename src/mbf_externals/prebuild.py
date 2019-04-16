@@ -159,6 +159,7 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
                     % (self, job)
                 )
         ppg.Job.depends_on(self, job)
+        return self
 
     def inject_auto_invariants(self):
         self.depends_on_func("mbf_func", self.real_callback)
@@ -169,7 +170,8 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
             pass
         else:
             raise ValueError(
-                "Some output files existed, some don't - undefined state, manual cleanup needed"
+                "Some output files existed, some don't - undefined state, manual cleanup needed\n:%s" (list(zip(
+                    self.filenames, exists)))
             )
         self.was_invalidated = True
 
@@ -283,10 +285,10 @@ class PrebuildManager:
                     # self.job_id = ":".join(sorted(str(x) for x in filenames))
 
                 def depends_on(self, _other_job):  # pragma: no cover
-                    pass
+                    return self
 
                 def depends_on_func(self, _name, _func):  # pragma: no cover
-                    pass
+                    return self
 
                 def __iter__(self):
                     yield self
