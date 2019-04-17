@@ -1,4 +1,6 @@
-from mbf_externals.util import to_string, to_bytes, chmod, lazy_method
+from mbf_externals.util import to_string, to_bytes, chmod, lazy_method, download_http
+import pytest
+import requests_mock
 import os
 
 
@@ -38,3 +40,10 @@ def test_lazy_method():
     x = Shu()
     assert x.up() == 1
     assert x.up() == 1
+
+
+def test_download_404():
+    with requests_mock.Mocker() as m:
+        m.get("http://test.com", text="argh", status_code=404)
+        with pytest.raises(ValueError):
+            download_http("http://test.com", "downloaded")

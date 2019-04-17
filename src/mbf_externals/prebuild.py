@@ -170,8 +170,9 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
             pass
         else:
             raise ValueError(
-                "Some output files existed, some don't - undefined state, manual cleanup needed\n:%s" (list(zip(
-                    self.filenames, exists)))
+                "Some output files existed, some don't - undefined state, manual cleanup needed\n:%s" % (
+                    list(zip(self.filenames, exists))
+                )
             )
         self.was_invalidated = True
 
@@ -278,7 +279,8 @@ class PrebuildManager:
                 and allow finding the msgpack jobs
                 """
 
-                def __init__(self, filenames):
+                def __init__(self, output_path, filenames):
+                    self.output_path = output_path
                     self.filenames = PrebuildJob._normalize_output_files(
                         filenames, output_path
                     )
@@ -290,10 +292,26 @@ class PrebuildManager:
                 def depends_on_func(self, _name, _func):  # pragma: no cover
                     return self
 
+                def depends_on_file(self, _filename):  # pragma: no cover
+                    return self
+
+                def name_file(self, output_filename):
+                    """Adjust path of output_filename by job path"""
+                    return self.output_path / output_filename
+
+                def find_file(self, output_filename):
+                    """Search for a file named output_filename in the job's known created files"""
+                    of = self.name_file(output_filename)
+                    for fn in self.filenames:
+                        if of.resolve() == Path(fn).resolve():
+                            return of
+                    else:
+                        raise KeyError("file not found: %s" % output_filename)
+
                 def __iter__(self):
                     yield self
 
-            return DummyJob(output_files)
+            return DummyJob(output_path, output_files)
 
 
 _global_manager = None

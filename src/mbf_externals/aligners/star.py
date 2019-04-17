@@ -108,7 +108,7 @@ class STAR(Aligner):
 
     def get_alignment_stats(self, output_bam_filename):
         target = Path(output_bam_filename).parent / "Log.final.out"
-        if not target.exists():
+        if not target.exists():  # pragma: no cover
             return {"No data found": 1}
         else:
             lines = target.read_text().split("\n")
@@ -121,5 +121,7 @@ class STAR(Aligner):
                 "Number of reads mapped to multiple loci",
             ]:
                 result[k] = int(lookup[k])
-            result["Unmapped"] = int(lookup["Number of input reads"]) - sum(result.values())
+            result["Unmapped"] = int(lookup["Number of input reads"]) - sum(
+                result.values()
+            )
             return result

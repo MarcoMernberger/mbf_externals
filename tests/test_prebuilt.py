@@ -159,7 +159,9 @@ class TestPrebuilt:
         ).depends_on(jobA)
         with pytest.raises(UpstreamChangedError):
             ppg.util.global_pipegraph.run()
-            raise ValueError([x.job_id for x in ppg.util.global_pipegraph.jobs.values()])
+            raise ValueError(
+                [x.job_id for x in ppg.util.global_pipegraph.jobs.values()]
+            )
 
         # this is also true if it was previously build on another machine
         new_pipegraph.new_pipegraph()
@@ -534,6 +536,7 @@ class TestPrebuilt:
 
     def test_depends_on_file(self, new_pipegraph):
         from mbf_externals.prebuild import PrebuildFileInvariantsExploding
+
         Path("prebuilt").mkdir()
         count_file = Path("count")
         count_file.write_text("0")
@@ -552,3 +555,26 @@ class TestPrebuilt:
                     break
         else:
             assert False
+
+
+class TestPrebuiltOutsideOfPPG:
+    def test_prebuild(self, new_pipegraph):
+        ppg.util.global_pipegraph = None
+        Path("prebuilt").mkdir()
+        mgr = PrebuildManager("prebuilt", "test_host")
+
+        def calc_05(output_path):
+            pass
+
+        Path("prebuilt/test_host/partA/0.5").mkdir(parents=True, exist_ok=True)
+        Path("prebuilt/test_host/partA/0.5/A").write_text("0.5")
+        jobA = mgr.prebuild("partA", "0.5", [], "A", calc_05)
+        jobA.depends_on_file(Path("count"))
+        jobA.depends_on_func("shu", lambda: None)
+        assert jobA.find_file("A")
+        with pytest.raises(KeyError):
+            jobA.find_file("B")
+        assert next(iter(jobA)) is jobA
+
+        with pytest.raises(ValueError):
+            mgr.prebuild("partB", "0.5", [], "A", calc_05)
