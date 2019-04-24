@@ -118,8 +118,10 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
 
     @classmethod
     def _normalize_output_files(cls, output_files, output_path):
-        output_files = [output_path / of for of in output_files]
-        output_files.append(output_path / "mbf.done")
+        output_files = [
+            Path(ppg.verify_job_id(output_path / of)) for of in output_files
+        ]
+        output_files.append(Path(ppg.verify_job_id(output_path / "mbf.done")))
         return output_files
 
     def __init__(self, output_files, calc_function, output_path):
@@ -170,9 +172,8 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
             pass
         else:
             raise ValueError(
-                "Some output files existed, some don't - undefined state, manual cleanup needed\n:%s" % (
-                    list(zip(self.filenames, exists))
-                )
+                "Some output files existed, some don't - undefined state, manual cleanup needed\n:%s"
+                % (list(zip(self.filenames, exists)))
             )
         self.was_invalidated = True
 

@@ -556,6 +556,18 @@ class TestPrebuilt:
         else:
             assert False
 
+    def test_machine_path(self, new_pipegraph):
+        pd = Path("prebuild").absolute()
+        pd.mkdir(exist_ok=True)
+        mgr = PrebuildManager(pd, "test_host")
+
+        def calc_05(output_path):
+            Path(output_path / "A").write_text("0.5")
+
+        mgr.prebuild("partA", "0.5", [], "A", calc_05)
+        ppg.run_pipegraph()
+        assert Path("prebuild/test_host/partA/0.5/A").read_text() == "0.5"
+
 
 class TestPrebuiltOutsideOfPPG:
     def test_prebuild(self, new_pipegraph):
