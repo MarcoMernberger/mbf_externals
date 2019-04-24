@@ -205,9 +205,7 @@ class ExternalAlgorithmStore:
             or not self._version_cache[algorithm_name]
         ):
             glob = f"{algorithm_name}__*.tar.gz"
-            print(glob, self.zip_path)
             matching = list(self.zip_path.glob(glob))
-            print(matching)
             versions = [x.stem[x.stem.find("__") + 2 : -4] for x in matching]
             self._version_cache[algorithm_name] = sort_versions(versions)
         return self._version_cache[algorithm_name]
