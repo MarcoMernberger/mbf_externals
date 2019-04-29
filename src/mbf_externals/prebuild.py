@@ -160,7 +160,7 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
                     "%s depended on a non-prebuild dependency %s - not supported"
                     % (self, job)
                 )
-        ppg.Job.depends_on(self, job)
+            ppg.Job.depends_on(self, job)
         return self
 
     def inject_auto_invariants(self):

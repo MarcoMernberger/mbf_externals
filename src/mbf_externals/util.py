@@ -1,5 +1,6 @@
 import functools
 import natsort
+from pathlib import Path
 
 
 class lazy_property(object):
@@ -99,13 +100,16 @@ class UpstreamChangedError(ValueError):
 def download_file(url, file_object):
     """Download an url"""
 
-    if isinstance(file_object, str):
+    if isinstance(file_object, (str, Path)):
         raise ValueError("download_file needs a file-object not a name")
 
-    if url.startswith("ftp"):
-        return download_ftp(url, file_object)
-    else:
-        return download_http(url, file_object)
+    try:
+        if url.startswith("ftp"):
+            return download_ftp(url, file_object)
+        else:
+            return download_http(url, file_object)
+    except Exception as e:
+        raise ValueError("Could not download %s, exception: %s" % (repr(url), e))
 
 
 def download_http(url, file_object):
@@ -129,6 +133,8 @@ def download_ftp(url, file_object):
     with ftplib.FTP(host) as ftp:
         try:
             ftp.login("anonymous", "")
+            if "\n" in path:
+                raise ValueError("New line in path: %s" % (repr(path),))
             if path.endswith("/"):
                 ftp.retrbinary("LIST " + path, file_object.write)
             else:
@@ -159,6 +165,21 @@ def download_file_and_gunzip(url, unzipped_filename):
     with gzip.GzipFile(tf.name, "rb") as gz_in:
         with open(unzipped_filename, "wb") as op:
             shutil.copyfileobj(gz_in, op)
+
+
+def download_file_and_gzip(url, gzipped_filename):
+    import shutil
+    import gzip
+    import tempfile
+
+    gzipped_filename = str(gzipped_filename)
+    if not gzipped_filename.endswith(".gz"):  # pragma: no cover
+        raise ValueError("output filename did not end with .gz")
+
+    with tempfile.NamedTemporaryFile(suffix="") as tf:
+        with gzip.GzipFile(tf.name, "wb") as gf:
+            download_file(url, gf)
+        shutil.copy(tf.name, gzipped_filename)
 
 
 def write_md5_sum(filepath):

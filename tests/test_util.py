@@ -1,7 +1,10 @@
-from mbf_externals.util import to_string, to_bytes, chmod, lazy_method, download_http
+from mbf_externals.util import to_string, to_bytes, chmod, lazy_method, download_http, download_file_and_gzip
+
 import pytest
 import requests_mock
 import os
+from pathlib import Path
+import gzip
 
 
 def test_to_string():
@@ -47,3 +50,19 @@ def test_download_404():
         m.get("http://test.com", text="argh", status_code=404)
         with pytest.raises(ValueError):
             download_http("http://test.com", "downloaded")
+
+
+def test_download_file_and_gzip(no_pipegraph):
+    should = "hello world[\n"
+    with requests_mock.Mocker() as m:
+        m.get("http://test.com", text=should)
+        with pytest.raises(ValueError):
+            download_file_and_gzip("http://test.com", 'test.gz.not_gz')
+        download_file_and_gzip("http://test.com", 'test.gz')
+        assert Path('test.gz').exists()
+        with gzip.GzipFile('test.gz') as op:
+            actual = op.read().decode("utf-8")
+        assert actual == should
+
+
+
