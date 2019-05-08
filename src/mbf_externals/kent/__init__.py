@@ -66,11 +66,11 @@ class BedToBigBed(ExternalAlgorithm):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             url = "http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bedToBigBed"
-            with (tmpdir / "liftOver").open("wb") as zip_file:
+            with (tmpdir / "bedToBigBed").open("wb") as zip_file:
                 download_file(url, zip_file)
-                subprocess.check_call(["chmod", "+x", str(tmpdir / "liftOver")])
+                subprocess.check_call(["chmod", "+x", str(tmpdir / "bedToBigBed")])
 
             subprocess.check_call(
-                ["tar", "cf", target_filename, "./liftOver"], cwd=tmpdir
+                ["tar", "cf", target_filename, "./bedToBigBed"], cwd=tmpdir
             )
             print(f"done downloading bedToBigBed version {v}")
