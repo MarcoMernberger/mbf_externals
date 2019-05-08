@@ -1,4 +1,11 @@
-from mbf_externals.util import to_string, to_bytes, chmod, lazy_method, download_http, download_file_and_gzip
+from mbf_externals.util import (
+    to_string,
+    to_bytes,
+    chmod,
+    lazy_method,
+    download_http,
+    download_file_and_gzip,
+)
 
 import pytest
 import requests_mock
@@ -57,12 +64,9 @@ def test_download_file_and_gzip(no_pipegraph):
     with requests_mock.Mocker() as m:
         m.get("http://test.com", text=should)
         with pytest.raises(ValueError):
-            download_file_and_gzip("http://test.com", 'test.gz.not_gz')
-        download_file_and_gzip("http://test.com", 'test.gz')
-        assert Path('test.gz').exists()
-        with gzip.GzipFile('test.gz') as op:
+            download_file_and_gzip("http://test.com", "test.gz.not_gz")
+        download_file_and_gzip("http://test.com", "test.gz")
+        assert Path("test.gz").exists()
+        with gzip.GzipFile("test.gz") as op:
             actual = op.read().decode("utf-8")
         assert actual == should
-
-
-

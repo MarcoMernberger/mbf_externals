@@ -133,7 +133,7 @@ def download_ftp(url, file_object):
     with ftplib.FTP(host) as ftp:
         try:
             ftp.login("anonymous", "")
-            if "\n" in path:
+            if "\n" in path:  # pragma: no cover
                 raise ValueError("New line in path: %s" % (repr(path),))
             if path.endswith("/"):
                 ftp.retrbinary("LIST " + path, file_object.write)

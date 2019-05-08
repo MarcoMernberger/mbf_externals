@@ -7,6 +7,7 @@ from .externals import (
 from .fastq import FASTQC
 from .prebuild import PrebuildManager, change_global_manager, get_global_manager
 from . import aligners
+from . import util
 from pathlib import Path
 import os
 
@@ -59,4 +60,5 @@ __all__ = [
     PrebuildManager,
     aligners,
     create_defaults(),
+    util,
 ]

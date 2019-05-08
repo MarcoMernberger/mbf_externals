@@ -25,7 +25,7 @@ class FASTQC(ExternalAlgorithm):
 
     @property
     def multi_core(self):
-        return False #  fastqc has a threads option - and does not make use of it
+        return False  # fastqc has a threads option - and does not make use of it
 
     def fetch_latest_version(self):  # pragma: no cover
         import tempfile
