@@ -20,11 +20,16 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         super().__init__(storage_filename, func)
 
     @classmethod
-    def hash_function(cls, function):
+    def hash_function(cls, function, use_old_style=False):
         if hasattr(function, "im_func") and "cyfunction" in repr(function.im_func):
             invariant = cls.get_cython_source(function)  # pragma: no cover
         else:
-            invariant = cls.dis_code(function.__code__, function)
+            if use_old_style:
+                invariant = cls.dis_code(
+                    function.__code__, function, version_info=(3, 6, 1)
+                )
+            else:
+                invariant = cls.dis_code(function.__code__, function)
         invariant_hash = hashlib.md5(invariant.encode("utf-8")).hexdigest()
         return invariant_hash
 
@@ -34,10 +39,12 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         if stf.exists():
             old_hash = stf.read_text()
             if old_hash != invariant_hash:
-                raise UpstreamChangedError(
-                    "Calculating function changed, bump version or rollback, or nuke job info ( %s )"
-                    % (self.job_id,)
-                )
+                new_hash_old_style = self.hash_function(self.function, True)
+                if old_hash != new_hash_old_style:
+                    raise UpstreamChangedError(
+                        "Calculating function changed, bump version or rollback, or nuke job info ( %s )"
+                        % (self.job_id,)
+                    )
         else:
             stf.write_text(invariant_hash)
         return old  # signal no invariant change
@@ -114,14 +121,16 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
                 raise ValueError("output_files must be relative")
         filenames = cls._normalize_output_files(filenames, output_path)
         job_id = ":".join(sorted(str(x) for x in filenames))
-        return ppg.Job.__new__(cls, job_id)
+        res = ppg.Job.__new__(cls, job_id)
+        res.filenames = filenames
+        return res
 
     @classmethod
     def _normalize_output_files(cls, output_files, output_path):
         output_files = [
-            Path(ppg.verify_job_id(output_path / of)) for of in output_files
+            Path(cls.verify_job_id(output_path / of)) for of in output_files
         ]
-        output_files.append(Path(ppg.verify_job_id(output_path / "mbf.done")))
+        output_files.append(Path(cls.verify_job_id(output_path / "mbf.done")))
         return output_files
 
     def __init__(self, output_files, calc_function, output_path):

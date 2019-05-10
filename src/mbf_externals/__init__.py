@@ -12,6 +12,9 @@ from pathlib import Path
 import os
 
 
+__version__ = "0.1"
+
+
 def create_defaults():
 
     if "MBF_EXTERNAL_PREBUILD_PATH" in os.environ:
@@ -61,4 +64,5 @@ __all__ = [
     aligners,
     create_defaults(),
     util,
+    __version__,
 ]
