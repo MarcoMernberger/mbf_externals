@@ -30,8 +30,7 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
                 )
             else:
                 invariant = cls.dis_code(function.__code__, function)
-        invariant_hash = hashlib.md5(invariant.encode("utf-8")).hexdigest()
-        return invariant_hash
+        return invariant
 
     def _get_invariant(self, old, all_invariant_stati):
         invariant_hash = self.hash_function(self.function)
@@ -41,9 +40,12 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
             if old_hash != invariant_hash:
                 new_hash_old_style = self.hash_function(self.function, True)
                 if old_hash != new_hash_old_style:
+                    stf.with_name(stf.name + '.changed').write_text(invariant_hash)
                     raise UpstreamChangedError(
-                        "Calculating function changed, bump version or rollback, or nuke job info ( %s )"
-                        % (self.job_id,)
+                        "Calculating function changed, bump version or rollback, or nuke job info ( %s )\n"
+                        "To compare, run \n"
+                        "icdiff %s %s"
+                        % (self.job_id, self.job_id, stf.with_name(stf.name + '.changed'))
                     )
         else:
             stf.write_text(invariant_hash)
