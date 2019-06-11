@@ -40,12 +40,17 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
             if old_hash != invariant_hash:
                 new_hash_old_style = self.hash_function(self.function, True)
                 if old_hash != new_hash_old_style:
-                    stf.with_name(stf.name + '.changed').write_text(invariant_hash)
+                    try:
+                        of = stf.with_name(stf.name + '.changed')
+                        of.write_text(invariant_hash)
+                    except:
+                        of = Path(stf.name + '.changed')
+                        of.write_text(invariant_hash)
                     raise UpstreamChangedError(
                         "Calculating function changed, bump version or rollback, or nuke job info ( %s )\n"
                         "To compare, run \n"
                         "icdiff %s %s"
-                        % (self.job_id, self.job_id, stf.with_name(stf.name + '.changed'))
+                        % (self.job_id, Path(self.job_id).absolute(), of.absolute())
                     )
         else:
             stf.write_text(invariant_hash)

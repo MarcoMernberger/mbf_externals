@@ -56,9 +56,13 @@ class ExternalAlgorithm(ABC):
             if actual_version in store.get_available_versions(self.name):
                 self.version = actual_version
             else:
-                raise ValueError(
-                    f"Version '{actual_version}' not found for algorithm {self.name}"
-                )
+                self.fetch_latest_version()
+                if actual_version in store.get_available_versions(self.name):
+                    self.version = actual_version
+                else:
+                    raise ValueError(
+                        f"Version '{actual_version}' not found for algorithm {self.name}"
+                    )
         self._store_used_version()
         self.path = store.get_unpacked_path(self.name, self.version)
 
