@@ -6,7 +6,6 @@ but they can often be shared among versions."""
 
 import socket
 from .util import Version, sort_versions, UpstreamChangedError, write_md5_sum
-import hashlib
 import pypipegraph as ppg
 from pathlib import Path
 import time
@@ -43,7 +42,7 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
                     try:
                         of = stf.with_name(stf.name + '.changed')
                         of.write_text(invariant_hash)
-                    except:
+                    except:  # noqa: E722
                         of = Path(stf.name + '.changed')
                         of.write_text(invariant_hash)
                     raise UpstreamChangedError(
