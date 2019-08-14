@@ -122,6 +122,12 @@ class Subread(Aligner):
         target = output_bam_filename.parent / "stderr.txt"
         raw = target.read_text()
         result = {}
-        for k in 'Total reads', 'Uniquely mapped', 'Unmapped':
+        total = 'Total reads'
+        if total not in raw:
+            total = 'Total fragments'
+        if total not in raw:
+            raise ValueError(f"Keyword {total} not in subread output.")
+        for k in total, 'Uniquely mapped', 'Mapped':
             result[k] = int(re.findall(f"{k} : (\\d+)", raw)[0][0])
+        result['Unmapped'] = result[total] - result['Mapped']
         return result
