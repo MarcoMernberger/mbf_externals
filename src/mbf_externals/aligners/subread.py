@@ -56,19 +56,35 @@ class Subread(Aligner):
             (Path(index_basename) / "subread_index").absolute(),
             "-r",
             Path(input_fastq).absolute(),
-            "--sortReadsByCoordinates",
             "-o",
             output_bam_filename.absolute(),
         ]
+        if "keepReadOrder" in parameters:
+            cmd.append("--keepReadOrder")
+        else:
+            cmd.append("--sortReadsByCoordinates")
         if paired_end_filename:
             cmd.extend(("-R", str(Path(paired_end_filename).absolute())))
+        if "max_mapping_locations" in parameters:
+            cmd.append("--multiMapping")
+
+        def remove_bai():
+            # subread create broken bais where idxstat doesn't work.
+            # but the mbf_aligned.lanes.AlignedSample will recreate it.
+            # so it's ok if we simply throw it away here.
+            bai_name = output_bam_filename.with_name(output_bam_filename.name + ".bai")
+            if bai_name.exists():
+                bai_name.unlink()
+
         job = self.run(
             Path(output_bam_filename).parent,
             cmd,
             additional_files_created=[
                 output_bam_filename,
-                output_bam_filename.with_name(output_bam_filename.name + ".bai"),
+                # subread create broken bais where idxstat doesn't work.
+                # output_bam_filename.with_name(output_bam_filename.name + ".bai"),
             ],
+            call_afterwards=remove_bai,
         )
         job.depends_on(
             ppg.ParameterInvariant(output_bam_filename, sorted(parameters.items()))
@@ -122,12 +138,12 @@ class Subread(Aligner):
         target = output_bam_filename.parent / "stderr.txt"
         raw = target.read_text()
         result = {}
-        total = 'Total reads'
+        total = "Total reads"
         if total not in raw:
-            total = 'Total fragments'
+            total = "Total fragments"
         if total not in raw:
             raise ValueError(f"Keyword {total} not in subread output.")
-        for k in total, 'Uniquely mapped', 'Mapped':
+        for k in total, "Uniquely mapped", "Mapped":
             result[k] = int(re.findall(f"{k} : (\\d+)", raw)[0][0])
-        result['Unmapped'] = result[total] - result['Mapped']
+        result["Unmapped"] = result[total] - result["Mapped"]
         return result

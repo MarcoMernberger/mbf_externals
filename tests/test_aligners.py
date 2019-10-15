@@ -24,6 +24,7 @@ class TestSubread:
         new_pipegraph.run()
         assert (Path("out") / "out.bam").exists()
         assert s.get_alignment_stats((Path("out") / "out.bam")) == {
+            'Mapped': 1,
             "Total reads": 1,
             "Uniquely mapped": 1,
             "Unmapped": 0,

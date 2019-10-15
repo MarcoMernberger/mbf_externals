@@ -42,6 +42,8 @@ class STAR(Aligner):
             "NoSharedMemory",
             "--readFilesIn",
         ]
+        if ',' in input_fastq or (paired_end_filename and ',' in paired_end_filename):
+            raise ValueError("STAR does not handle fastq filenames with a comma")
         if paired_end_filename:
             cmd.extend(
                 [
