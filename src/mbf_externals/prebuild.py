@@ -56,7 +56,8 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         return old  # signal no invariant change
 
 
-class PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
+class _PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
+    """Used by PrebuildJob to handle input file deps"""
     def __new__(cls, job_id, filenames):
         job_id = "PFIE_" + str(job_id)
         return ppg.Job.__new__(cls, job_id)
@@ -64,6 +65,9 @@ class PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
     def __init__(self, job_id, filenames):
         job_id = "PFIE_" + str(job_id)
         self.filenames = filenames
+        for f in filenames:
+            if not (isinstance(f, str) or isinstance(f, Path)):
+                raise ValueError(f"filenames must be str/path. Was {repr(f)}")
         self.is_prebuild = True
         ppg.Job.__init__(self, job_id)
 
@@ -129,6 +133,7 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
         job_id = ":".join(sorted(str(x) for x in filenames))
         res = ppg.Job.__new__(cls, job_id)
         res.filenames = filenames
+        res.output_path = Path(output_path)
         return res
 
     @classmethod
@@ -164,7 +169,7 @@ class PrebuildJob(ppg.MultiFileGeneratingJob):
         return job
 
     def depends_on_file(self, filename):
-        job = PrebuildFileInvariantsExploding(filename, [filename])
+        job = _PrebuildFileInvariantsExploding(filename, [filename])
         self.depends_on(job)
         return job
 
@@ -236,8 +241,15 @@ class PrebuildManager:
         calculating_function,
         minimum_acceptable_version=None,
         maximum_acceptable_version=None,
+        further_function_deps = {}
     ):
-        """Create a job that will prebuilt the files if necessary"""
+        """Create a job that will prebuilt the files if necessary
+
+        @further_function_deps is a dictionary name => func, 
+        and will end up as PrebuildFunctionInvariantFileStoredExploding 
+        in the correct directory
+
+        """
         if minimum_acceptable_version is None:
             minimum_acceptable_version = version
 
@@ -279,7 +291,7 @@ class PrebuildManager:
         output_files = [Path(of) for of in output_files]
         if ppg.inside_ppg():
             job = PrebuildJob(output_files, calculating_function, output_path)
-            job.depends_on(PrebuildFileInvariantsExploding(output_path, input_files))
+            job.depends_on(_PrebuildFileInvariantsExploding(output_path, input_files))
             job.version = version
             return job
         else:
