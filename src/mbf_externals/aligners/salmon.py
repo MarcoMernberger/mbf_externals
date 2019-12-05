@@ -135,7 +135,15 @@ class Salmon(ExternalAlgorithm):
         with open(target_filename, "wb") as op:
             download_file(url, op)
 
-    def run_alevin(self, output_path, fastqs_r1_r2, genome, method, dumpMtx=False, dumpFeatures=True):
+    def run_alevin(
+        self,
+        output_path,
+        fastqs_r1_r2,
+        genome,
+        method,
+        dumpMtx=False,
+        dumpFeatures=True,
+    ):
         allowed_methods = (
             "chromium",
             "chromuimV3",
@@ -157,14 +165,20 @@ class Salmon(ExternalAlgorithm):
                 r2s.append(str(r2))
                 if " " in str(r1) or " " in str(r2):
                     raise ValueError("Spaces in fastq names not allowed", r1, r2)
-        except  ValueError as e: 
-            if 'not enough values' in str(e):
-                raise ValueError("alevin currently works on paired end data like drop seq only?")
+        except ValueError as e:
+            if "not enough values" in str(e):
+                raise ValueError(
+                    "alevin currently works on paired end data like drop seq only?"
+                )
             else:
                 raise
 
-        cmd = (["alevin", "-lISR",  # inward, stranded, came from reverse strand... thats' right for dropseq
-                "-1"]
+        cmd = (
+            [
+                "alevin",
+                "-lISR",  # inward, stranded, came from reverse strand... thats' right for dropseq
+                "-1",
+            ]
             + r1s
             + ["-2"]
             + r2s
@@ -189,8 +203,37 @@ class Salmon(ExternalAlgorithm):
         if dumpFeatures:
             cmd.append("--dumpFeatures")
 
+        self.get_run_func(output_path, cmd)()
 
+    def run_alevin_on_sample(self, lane, genome, method):
+        output = Path("results/alevin/") / lane.name
 
-        self.get_run_func(
-            output_path,
-            cmd)()
+        def run_alevin():
+            output.mkdir(exist_ok=True, parents=True)
+            salmon.run_alevin(
+                output, [lane.get_aligner_input_filenames()], genome, method
+            )
+            (output / "sentinel.txt").write_text("done")
+
+        job = ppg.FileGeneratingJob(output / "sentinel.txt", run_alevin).depends_on(
+            genome.build_index(salmon), lane.prepare_input()
+        )
+
+        def run_qc():
+            (output / "QC").mkdir(exist_ok=True)
+            import rpy2.robjects as ro
+
+            ro.r("library('alevinQC')")
+            ro.r("alevinQCReport")(
+                baseDir=str(output.absolute()),
+                sampleId=lane.name,
+                outputFile="alevinReport.html",
+                outputFormat="html_document",
+                outputDir=str((output / "QC").absolute()),
+                forceOverwrite=True,
+            )
+
+        qc_job = ppg.FileGeneratingJob(
+            output / "QC" / "alevinReport.html", run_qc
+        ).depends_on(job)
+        return job, qc_job
