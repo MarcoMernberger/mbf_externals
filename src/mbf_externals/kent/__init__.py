@@ -19,15 +19,15 @@ class LiftOver(ExternalAlgorithm):
     def multi_core(self):  # pragma: no cover
         return False
 
-    def fetch_latest_version(self):  # pragma: no cover
+    def get_latest_version(self):
+        return "0.1"
+
+    def fetch_version(self, version, target_filename):  # pragma: no cover
         import tempfile
         from pathlib import Path
         import subprocess
 
-        v = "0.1"
-        if v in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, v).absolute()
+        v = version
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             url = "http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/liftOver"
@@ -54,15 +54,15 @@ class BedToBigBed(ExternalAlgorithm):
     def multi_core(self):  # pragma: no cover
         return False
 
-    def fetch_latest_version(self):  # pragma: no cover
+    def get_latest_version(self):
+        return "0.1"
+
+    def fetch_version(self, version, target_filename):  # pragma: no cover
         import tempfile
         from pathlib import Path
         import subprocess
 
-        v = "0.1"
-        if v in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, v).absolute()
+        v = version
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             url = "http://hgdownload.cse.ucsc.edu/admin/exe/linux.x86_64/bedToBigBed"

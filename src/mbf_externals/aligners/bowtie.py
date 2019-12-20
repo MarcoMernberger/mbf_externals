@@ -88,16 +88,14 @@ class Bowtie(Aligner):
         ]
         return self.get_run_func(output_fileprefix, cmd, cwd=output_fileprefix)
 
-    def fetch_latest_version(self):  # pragma: no cover
+    def get_latest_version(self):
+        return "1.2.2"
+
+    def fetch_version(self, version, target_filename):  # pragma: no cover
         import tempfile
         import subprocess
 
-        version = "1.2.2"
         url = f"https://downloads.sourceforge.net/project/bowtie-bio/bowtie/{version}/bowtie-{version}-linux-x86_64.zip"
-        print(url)
-        if version in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, version).absolute()
         tf = tempfile.NamedTemporaryFile("wb", suffix=".zip")
         download_file(url, tf)
         tf.flush()

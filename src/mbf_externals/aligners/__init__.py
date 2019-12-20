@@ -3,4 +3,4 @@ from .subread import Subread
 from .bowtie import Bowtie
 from .salmon import Salmon
 
-all = [Bowtie, Subread, STAR]
+all = [Bowtie, Subread, STAR, Salmon]

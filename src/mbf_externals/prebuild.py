@@ -39,12 +39,14 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
             if old_hash != invariant_hash:
                 new_hash_old_style = self.hash_function(self.function, True)
                 if old_hash != new_hash_old_style:
+                    stf = Path(stf)
                     try:
-                        of = stf.with_name(stf.name + '.changed')
+                        of = stf.with_name(stf.name + ".changed")
                         of.write_text(invariant_hash)
-                    except:  # noqa: E722
-                        of = Path(stf.name + '.changed')
-                        of.write_text(invariant_hash)
+                    except IOError:  # noqa: E722
+                        # fallback if the stf directory is not writeable.
+                        of = Path(stf.name + ".changed")  # pragma: no cover
+                        of.write_text(invariant_hash)  # pragma: no cover
                     raise UpstreamChangedError(
                         "Calculating function changed, bump version or rollback, or nuke job info ( %s )\n"
                         "To compare, run \n"
@@ -58,6 +60,7 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
 
 class _PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
     """Used by PrebuildJob to handle input file deps"""
+
     def __new__(cls, job_id, filenames):
         job_id = "PFIE_" + str(job_id)
         return ppg.Job.__new__(cls, job_id)
@@ -66,7 +69,7 @@ class _PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
         job_id = "PFIE_" + str(job_id)
         self.filenames = filenames
         for f in filenames:
-            if not (isinstance(f, str) or isinstance(f, Path)):
+            if not (isinstance(f, str) or isinstance(f, Path)):  # pragma: no cover
                 raise ValueError(f"filenames must be str/path. Was {repr(f)}")
         self.is_prebuild = True
         ppg.Job.__init__(self, job_id)
@@ -241,12 +244,12 @@ class PrebuildManager:
         calculating_function,
         minimum_acceptable_version=None,
         maximum_acceptable_version=None,
-        further_function_deps = {}
+        further_function_deps={},
     ):
         """Create a job that will prebuilt the files if necessary
 
-        @further_function_deps is a dictionary name => func, 
-        and will end up as PrebuildFunctionInvariantFileStoredExploding 
+        @further_function_deps is a dictionary name => func,
+        and will end up as PrebuildFunctionInvariantFileStoredExploding
         in the correct directory
 
         """

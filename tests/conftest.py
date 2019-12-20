@@ -14,7 +14,11 @@ from pypipegraph.testing.fixtures import (  # noqa:F401
     pytest_runtest_makereport,
     no_pipegraph,
 )
-from mbf_externals.testing.fixtures import local_store, global_store  # noqa:F401
+from mbf_externals.testing.fixtures import (  # noqa:F401
+    local_store,
+    per_test_store,
+    per_run_store,
+)
 
 root = Path(__file__).parent.parent
 sys.path.append(str(root / "src"))

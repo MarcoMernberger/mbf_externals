@@ -535,7 +535,7 @@ class TestPrebuilt:
             jobA.depends_on(ppg.FunctionInvariant("shu", lambda: 5))
 
     def test_depends_on_file(self, new_pipegraph):
-        from mbf_externals.prebuild import PrebuildFileInvariantsExploding
+        from mbf_externals.prebuild import _PrebuildFileInvariantsExploding
 
         Path("prebuilt").mkdir()
         count_file = Path("count")
@@ -550,7 +550,7 @@ class TestPrebuilt:
         jobA = mgr.prebuild("partA", "0.5", [], "A", calc_05)
         jobA.depends_on_file(count_file)
         for p in jobA.prerequisites:
-            if isinstance(p, PrebuildFileInvariantsExploding):
+            if isinstance(p, _PrebuildFileInvariantsExploding):
                 if count_file in p.filenames:
                     break
         else:

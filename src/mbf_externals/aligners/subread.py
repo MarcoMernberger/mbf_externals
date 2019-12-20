@@ -59,13 +59,13 @@ class Subread(Aligner):
             "-o",
             output_bam_filename.absolute(),
         ]
-        if "keepReadOrder" in parameters:
+        if "keepReadOrder" in parameters:  # pragma: no cover
             cmd.append("--keepReadOrder")
         else:
             cmd.append("--sortReadsByCoordinates")
         if paired_end_filename:
             cmd.extend(("-R", str(Path(paired_end_filename).absolute())))
-        if "max_mapping_locations" in parameters:
+        if "max_mapping_locations" in parameters:  # pragma: no cover
             cmd.append("--multiMapping")
 
         def remove_bai():
@@ -115,18 +115,10 @@ class Subread(Aligner):
         else:
             return "0.1", "1.5.99"
 
-    def fetch_latest_version(self):  # pragma: no cover
-        return (
-            self.fetch_version("1.6.3"),
-            self.fetch_version("1.4.3-p1"),
-            self.fetch_version("1.5.0"),
-        )
+    def get_latest_version(self):
+        return "1.6.3"
 
-    def fetch_version(self, version):  # pragma: no cover
-        if version in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, version).absolute()
-
+    def fetch_version(self, version, target_filename):  # pragma: no cover
         url = f"https://downloads.sourceforge.net/project/subread/subread-{version}/subread-{version}-Linux-x86_64.tar.gz"
         with open(target_filename, "wb") as op:
             download_file(url, op)
@@ -137,13 +129,9 @@ class Subread(Aligner):
         output_bam_filename = Path(output_bam_filename)
         target = output_bam_filename.parent / "stderr.txt"
         raw = target.read_text()
+        raw = raw[raw.find("= Summary =") :]
         result = {}
-        total = "Total reads"
-        if total not in raw:
-            total = "Total fragments"
-        if total not in raw:
-            raise ValueError(f"Keyword {total} not in subread output.")
-        for k in total, "Uniquely mapped", "Mapped":
-            result[k] = int(re.findall(f"{k} : (\\d+)", raw)[0][0])
-        result["Unmapped"] = result[total] - result["Mapped"]
+        keys = "Uniquely mapped", "Multi-mapping", "Unmapped"
+        for k in keys:
+            result[k] = int(re.findall(f"{k} : (\\d+)", raw)[0])
         return result

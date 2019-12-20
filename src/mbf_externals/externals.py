@@ -1,6 +1,8 @@
 from pathlib import Path
 import time
 import subprocess
+import os
+import stat
 from abc import ABC, abstractmethod
 import pypipegraph as ppg
 from .util import lazy_property, sort_versions
@@ -15,6 +17,10 @@ def change_global_store(new_store):
 
 def get_global_store():
     return _global_store
+
+
+class DownloadDiscrepancyException(ValueError):
+    pass
 
 
 class ExternalAlgorithm(ABC):
@@ -45,24 +51,16 @@ class ExternalAlgorithm(ABC):
         else:
             actual_version = version
         if actual_version == "_latest":
-            try:
-                self.version = store.get_available_versions(self.name)[-1]
-            except IndexError:
-                self.fetch_latest_version()
-                self.version = store.get_available_versions(self.name)[-1]
+            self.version = self.get_latest_version()
+            self._fetch_and_check(self.version)
         elif actual_version == "_fetching":  # pragma: no cover
             self.version = "_fetching"
         else:
             if actual_version in store.get_available_versions(self.name):
                 self.version = actual_version
             else:
-                self.fetch_latest_version()
-                if actual_version in store.get_available_versions(self.name):
-                    self.version = actual_version
-                else:
-                    raise ValueError(
-                        f"Version '{actual_version}' not found for algorithm {self.name}"
-                    )
+                self._fetch_and_check(actual_version)
+                self.version = actual_version
         self._store_used_version()
         self.path = store.get_unpacked_path(self.name, self.version)
 
@@ -140,6 +138,12 @@ class ExternalAlgorithm(ABC):
             ),
             ppg.FunctionInvariant(str(sentinel) + "_call_afterwards", call_afterwards),
         )
+        job.ignore_code_changes()
+        job.depends_on(
+            ppg.FunctionInvariant(
+                job.job_id + "_build_cmd_func", self.__class__.build_cmd
+            )
+        )
         if self.multi_core:
             job.cores_needed = -1
         return job
@@ -193,14 +197,58 @@ class ExternalAlgorithm(ABC):
         else:
             return f"Return code != 0: {return_code}"
 
-    def fetch_latest_version(self):  # pragma: no cover
+    def _fetch_and_check(self, version):
+        if self.store.no_downloads:
+            print("WARNING: Downloads disabled for this store")
+            return
+        target_filename = self.store.get_zip_file_path(self.name, version).absolute()
+        if target_filename.exists():
+            return
+        self.fetch_version(version, target_filename)
+        try:
+            checksum = ppg.util.checksum_file(target_filename)
+        except OSError:  # pragma: no cover
+            raise ValueError("Algorithm did not download correctly")
+        md5_file = target_filename.with_name(target_filename.name + ".md5sum")
+        st = os.stat(target_filename)
+        with open(md5_file, "wb") as op:
+            op.write(checksum.encode("utf-8"))
+        os.utime(md5_file, (st[stat.ST_MTIME], st[stat.ST_MTIME]))
+        self._check_hash_against_others(target_filename, checksum)
+
+    def _check_hash_against_others(self, target_filename, checksum):
+        """See if another machine has downloaded the file and synced it's mbf_store.
+        If so, look at it's hash. If it differs, throw an Exception"""
+        search_path = self.store.zip_path.absolute().parent.parent.parent
+        print(search_path)
+        search_key = "**/" + self.store.zip_path.name + "/" + target_filename.name
+        by_hash = {checksum: [target_filename]}
+        for found in search_path.glob(search_key):
+            print("found", found)
+            if found != target_filename:
+                cs = ppg.util.checksum_file(found)
+                if not cs in by_hash:
+                    by_hash[cs] = []
+                by_hash[cs].append(found)
+        if len(by_hash) > 1:
+            import pprint
+
+            pprint.pprint(by_hash)
+            raise DownloadDiscrepancyException(
+                "Found multiple different {target_filename.name} with different md5sum. Investitage and fix, please"
+            )
+
+    def fetch_version(self, version, target_filename):  # pragma: no cover
+        # overwrite this in the downstream algorithms
+        raise NotImplementedError()
         pass
 
 
 class ExternalAlgorithmStore:
-    def __init__(self, zip_path, unpack_path):
+    def __init__(self, zip_path, unpack_path, no_downloads=False):
         self.zip_path = Path(zip_path)
         self.unpack_path = Path(unpack_path)
+        self.no_downloads = no_downloads
         self._version_cache = {}
 
     def get_available_versions(self, algorithm_name):

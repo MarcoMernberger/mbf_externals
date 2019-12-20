@@ -42,7 +42,7 @@ class STAR(Aligner):
             "NoSharedMemory",
             "--readFilesIn",
         ]
-        if ',' in input_fastq or (paired_end_filename and ',' in paired_end_filename):
+        if ',' in str(input_fastq) or (paired_end_filename and ',' in str(paired_end_filename)):  # pragma: no cover
             raise ValueError("STAR does not handle fastq filenames with a comma")
         if paired_end_filename:
             cmd.extend(
@@ -99,11 +99,11 @@ class STAR(Aligner):
         ]
         return self.get_run_func(output_fileprefix, cmd, cwd=output_fileprefix)
 
-    def fetch_latest_version(self):  # pragma: no cover
-        v = "2.6.1d"
-        if v in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, v).absolute()
+    def get_latest_version(self):
+        return "2.6.1d"
+
+    def fetch_version(self, version, target_filename):  # pragma: no cover
+        v = version
         url = f"https://github.com/alexdobin/STAR/archive/{v}.tar.gz"
         with open(target_filename, "wb") as op:
             download_file(url, op)

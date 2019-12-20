@@ -4,7 +4,7 @@ from mbf_externals import FASTQC
 
 
 class TestFASTQC:
-    def test_quick_run(self, new_pipegraph, global_store):
+    def test_quick_run(self, new_pipegraph, per_test_store):
         new_pipegraph.quiet = False
         data_path = (Path(__file__).parent / "sample_data").absolute()
         a = FASTQC()

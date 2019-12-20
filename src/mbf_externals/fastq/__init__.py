@@ -27,15 +27,16 @@ class FASTQC(ExternalAlgorithm):
     def multi_core(self):
         return False  # fastqc has a threads option - and does not make use of it
 
-    def fetch_latest_version(self):  # pragma: no cover
+    def get_latest_version(self):
+        return "0.11.8"
+
+    def fetch_version(self, version, target_filename):  # pragma: no cover
         import tempfile
         from pathlib import Path
         import subprocess
 
-        v = "0.11.8"
-        if v in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, v).absolute()
+        v = version
+
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir = Path(tmpdir)
             url = f"https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{v}.zip"

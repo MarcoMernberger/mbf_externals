@@ -41,11 +41,10 @@ if __name__ == "__main__":
     store = mbf_externals.ExternalAlgorithmStore(target_dir, "doesnotexist")
     mbf_externals.change_global_store(store)
     for sc in all_subclasses(mbf_externals.ExternalAlgorithm):
-        if hasattr(sc, "fetch_latest_version"):
+        if hasattr(sc, "fetch_version"):
             try:
                 x = sc(version="_fetching")
                 print("fetching", x.name)
-                x.fetch_latest_version()
             except TypeError as e:
                 if "abstract class" in str(e):
                     pass

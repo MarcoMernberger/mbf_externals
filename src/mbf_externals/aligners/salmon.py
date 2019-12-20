@@ -1,6 +1,4 @@
 from ..externals import ExternalAlgorithm
-import os
-import tempfile
 import pypipegraph as ppg
 from pathlib import Path
 from ..util import download_file
@@ -10,7 +8,7 @@ import hashlib
 class Salmon(ExternalAlgorithm):
     def __init__(self, accepted_biotypes, version="_last_used", store=None):
         """@accepted_biotypes may be a set, or None to use all"""
-        if not accepted_biotypes is None and not isinstance(accepted_biotypes, set):
+        if accepted_biotypes is not None and not isinstance(accepted_biotypes, set):
             raise ValueError("@accepted_biotypes may be a set, or None to use all")
         self.accepted_biotypes = accepted_biotypes
         super().__init__(version, store)
@@ -123,13 +121,10 @@ class Salmon(ExternalAlgorithm):
             # os.unlink(tf_cdna.name)
             of_mapping.close()
 
-    def fetch_latest_version(self):  # pragma: no cover
-        return self.fetch_version(self.latest_version)
+    def get_latest_version(self):
+        return self.latest_version
 
-    def fetch_version(self, version):
-        if version in self.store.get_available_versions(self.name):
-            return
-        target_filename = self.store.get_zip_file_path(self.name, version).absolute()
+    def fetch_version(self, version, target_filename):
         url = f"https://github.com/COMBINE-lab/salmon/releases/download/v{version}/salmon-{version}_linux_x86_64.tar.gz"
         # we want a tar.gz, we get a tar.gz
         with open(target_filename, "wb") as op:
@@ -210,13 +205,13 @@ class Salmon(ExternalAlgorithm):
 
         def run_alevin():
             output.mkdir(exist_ok=True, parents=True)
-            salmon.run_alevin(
+            self.run_alevin(
                 output, [lane.get_aligner_input_filenames()], genome, method
             )
             (output / "sentinel.txt").write_text("done")
 
         job = ppg.FileGeneratingJob(output / "sentinel.txt", run_alevin).depends_on(
-            genome.build_index(salmon), lane.prepare_input()
+            genome.build_index(self), lane.prepare_input()
         )
 
         def run_qc():
