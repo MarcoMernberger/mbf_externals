@@ -23,6 +23,18 @@ class DownloadDiscrepancyException(ValueError):
     pass
 
 
+def reproducible_tar(target_tar, folder, cwd):
+    """Create tars that look the same every time."""
+    # see http://h2.jaguarpaw.co.uk/posts/reproducible-tar/
+    import shlex
+
+    target_tar = str(target_tar)
+    folder = str(folder)
+
+    cmd = f'find {shlex.quote(folder)} -print0| sort -z | tar -cf {shlex.quote(target_tar)} --format=posix --numeric-owner --owner=1001 --group=2000 --mode="go+rwX,u+rwX" --mtime="1970-01-01" --no-recursion --null --files-from -'
+    subprocess.check_call(cmd, shell=True, cwd=cwd)
+
+
 class ExternalAlgorithm(ABC):
     """Together with an ExternalAlgorithmStore (or the global one),
     ExternalAlgorithm encapsulates a callable algorithm such as a high throughput aligner.
@@ -235,7 +247,7 @@ class ExternalAlgorithm(ABC):
 
             pprint.pprint(by_hash)
             raise DownloadDiscrepancyException(
-                "Found multiple different {target_filename.name} with different md5sum. Investitage and fix, please"
+                "Found multiple different {target_filename.name} with different md5sum. Investitage and fix (possibly using reproducible_tar), please."
             )
 
     def fetch_version(self, version, target_filename):  # pragma: no cover

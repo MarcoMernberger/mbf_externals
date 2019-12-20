@@ -2,6 +2,7 @@ from .base import Aligner
 import pypipegraph as ppg
 from pathlib import Path
 from ..util import download_file
+from ..externals import reproducible_tar
 
 
 class Bowtie(Aligner):
@@ -101,4 +102,4 @@ class Bowtie(Aligner):
         tf.flush()
         td = tempfile.TemporaryDirectory()
         subprocess.check_call(["unzip", str(Path(tf.name).absolute())], cwd=td.name)
-        subprocess.check_call(["tar", "cf", str(target_filename), "."], cwd=td.name)
+        reproducible_tar(target_filename, '.', td.name)

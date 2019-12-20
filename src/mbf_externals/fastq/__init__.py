@@ -2,7 +2,7 @@
 #  import time
 #  from pathlib import Path
 #  from .. import find_code_path
-from ..externals import ExternalAlgorithm
+from ..externals import ExternalAlgorithm, reproducible_tar
 from ..util import download_file
 
 
@@ -49,7 +49,5 @@ class FASTQC(ExternalAlgorithm):
             subprocess.check_call(
                 ["chmod", "+x", str(tmpdir / "target" / "FastQC" / "fastqc")]
             )
-            subprocess.check_call(
-                ["tar", "cf", target_filename, "./"], cwd=tmpdir / "target"
-            )
+            reproducible_tar(target_filename.absolute(), "./", cwd=tmpdir / "target")
             print(f"done downloading FASTQC version {v}")

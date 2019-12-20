@@ -2,7 +2,7 @@
 #  import time
 #  from pathlib import Path
 #  from .. import find_code_path
-from ..externals import ExternalAlgorithm
+from ..externals import ExternalAlgorithm, reproducible_tar
 from ..util import download_file
 
 
@@ -35,9 +35,7 @@ class LiftOver(ExternalAlgorithm):
                 download_file(url, zip_file)
                 subprocess.check_call(["chmod", "+x", str(tmpdir / "liftOver")])
 
-            subprocess.check_call(
-                ["tar", "cf", target_filename, "./liftOver"], cwd=tmpdir
-            )
+            reproducible_tar(target_filename, "./liftOver", cwd=tmpdir)
             print(f"done downloading liftover version {v}")
 
 
@@ -70,7 +68,5 @@ class BedToBigBed(ExternalAlgorithm):
                 download_file(url, zip_file)
                 subprocess.check_call(["chmod", "+x", str(tmpdir / "bedToBigBed")])
 
-            subprocess.check_call(
-                ["tar", "cf", target_filename, "./bedToBigBed"], cwd=tmpdir
-            )
+            reproducible_tar(target_filename, "./bedToBigBed", cwd=tmpdir)
             print(f"done downloading bedToBigBed version {v}")
