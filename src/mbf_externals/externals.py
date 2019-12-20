@@ -31,8 +31,22 @@ def reproducible_tar(target_tar, folder, cwd):
     target_tar = str(target_tar)
     folder = str(folder)
 
-    cmd = f'find {shlex.quote(folder)} -print0| sort -z | tar -cf {shlex.quote(target_tar)} --format=posix --numeric-owner --owner=1001 --group=2000 --mode="go+rwX,u+rwX" --mtime="1970-01-01" --no-recursion --null --files-from -'
-    subprocess.check_call(cmd, shell=True, cwd=cwd)
+    cmd = [
+        "tar",
+        "--format=posix",
+        "--pax-option=exthdr.name=%d/PaxHeaders/%f,delete=atime,delete=ctime,delete=mtime",
+        "--mtime=1970-01-01 00:00:00Z",
+        "--sort=name",
+        "--numeric-owner",
+        "--owner=0",
+        "--group=0",
+        '--mode=go+rwX,u+rwX',
+        "-cvf",
+        target_tar,
+        folder,
+    ]
+    subprocess.check_call(cmd, cwd=cwd)
+
 
 
 class ExternalAlgorithm(ABC):
