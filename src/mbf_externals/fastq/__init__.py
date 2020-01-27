@@ -2,8 +2,8 @@
 #  import time
 #  from pathlib import Path
 #  from .. import find_code_path
-from ..externals import ExternalAlgorithm, reproducible_tar
-from ..util import download_file
+from ..externals import ExternalAlgorithm
+from ..util import download_zip_and_turn_into_tar_gzip
 
 
 class FASTQC(ExternalAlgorithm):
@@ -31,23 +31,12 @@ class FASTQC(ExternalAlgorithm):
         return "0.11.8"
 
     def fetch_version(self, version, target_filename):  # pragma: no cover
-        import tempfile
-        from pathlib import Path
-        import subprocess
 
         v = version
+        download_zip_and_turn_into_tar_gzip(
+            f"https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{v}.zip",
+            target_filename,
+            ["FastQC/fastqc"],
+        )
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tmpdir = Path(tmpdir)
-            url = f"https://www.bioinformatics.babraham.ac.uk/projects/fastqc/fastqc_v{v}.zip"
-            with (tmpdir / "fastqc.zip").open("wb") as zip_file:
-                download_file(url, zip_file)
-            import zipfile
-
-            with zipfile.ZipFile(zip_file.name, "r") as zip_ref:
-                zip_ref.extractall(tmpdir / "target")
-            subprocess.check_call(
-                ["chmod", "+x", str(tmpdir / "target" / "FastQC" / "fastqc")]
-            )
-            reproducible_tar(target_filename.absolute(), "./", cwd=tmpdir / "target")
-            print(f"done downloading FASTQC version {v}")
+        print(f"done downloading FASTQC version {v}")

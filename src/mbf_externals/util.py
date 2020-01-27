@@ -227,3 +227,41 @@ def chmod(filename, mode):
                 pass
             os.unlink(filename)
             shutil.move(t, filename)
+
+
+def download_zip_and_turn_into_tar_gzip(url, target_filename, chmod_x_files=[]):
+    """Download a zip archive and turn it into the correct tar.gzip
+    """
+    import tempfile
+    import subprocess
+    from .externals import reproducible_tar
+
+    if isinstance(chmod_x_files, str):  # pragma: no cover
+        chmod_x_files = [chmod_x_files]
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        with (tmpdir / "source.zip").open("wb") as zip_file:
+            download_file(url, zip_file)
+        import zipfile
+
+        with zipfile.ZipFile(zip_file.name, "r") as zip_ref:
+            zip_ref.extractall(tmpdir / "target")
+        for fn in chmod_x_files:
+            subprocess.check_call(
+                ["chmod", "+x", str(tmpdir.absolute() / "target" / fn)]
+            )
+        reproducible_tar(target_filename.absolute(), "./", cwd=tmpdir / "target")
+
+
+def download_mercurial_update_and_zip(url, changeset, target_filename):
+    """Download a mercurial repo, update it to a specific changeset, and tar it up"""
+    import tempfile
+    import subprocess
+    from .externals import reproducible_tar
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
+        subprocess.check_call(["hg", "clone", url, str(tmpdir.absolute())])
+        subprocess.check_call(["hg", "up", "-r", changeset], cwd=tmpdir)
+        reproducible_tar(target_filename.absolute(), "./", cwd=tmpdir)

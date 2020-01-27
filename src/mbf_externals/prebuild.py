@@ -43,7 +43,7 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
                     try:
                         of = stf.with_name(stf.name + ".changed")
                         of.write_text(invariant_hash)
-                    except IOError:  # noqa: E722
+                    except IOError:  # noqa: E722 pragma: no cover
                         # fallback if the stf directory is not writeable.
                         of = Path(stf.name + ".changed")  # pragma: no cover
                         of.write_text(invariant_hash)  # pragma: no cover

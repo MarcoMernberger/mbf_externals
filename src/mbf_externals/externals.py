@@ -26,7 +26,6 @@ class DownloadDiscrepancyException(ValueError):
 def reproducible_tar(target_tar, folder, cwd):
     """Create tars that look the same every time."""
     # see http://h2.jaguarpaw.co.uk/posts/reproducible-tar/
-    import shlex
 
     target_tar = str(target_tar)
     folder = str(folder)
@@ -40,13 +39,12 @@ def reproducible_tar(target_tar, folder, cwd):
         "--numeric-owner",
         "--owner=0",
         "--group=0",
-        '--mode=go+rwX,u+rwX',
+        "--mode=go+rwX,u+rwX",
         "-cvf",
         target_tar,
         folder,
     ]
     subprocess.check_call(cmd, cwd=cwd)
-
 
 
 class ExternalAlgorithm(ABC):
