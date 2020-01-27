@@ -34,7 +34,11 @@ class PeakZilla(ExternalAlgorithm):
                 "parameters": parameters,
             },
         )
-        run_job.depends_on(ppg.ParameterInvariant(name, parameters))
+        run_job.depends_on(
+            ppg.ParameterInvariant(name, parameters),
+            input_lane.load(),
+            background_lane.load(),
+        )
 
         def do_load_peaks():
             import pandas as pd
@@ -78,7 +82,7 @@ class PeakZilla(ExternalAlgorithm):
             "-l",
             str(output_directory / "log.txt"),
         ]
-        if arguments["paired"]: # pragma: no cover
+        if arguments["paired"]:  # pragma: no cover
             cmd.append("-p")
         cmd.append(arguments["input_bam"])
         cmd.append(arguments["background_bam"])
