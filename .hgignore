@@ -53,3 +53,4 @@ result_images
 *.coverage*
 tests/run/*
 tests/zipped/*
+store/*
