@@ -11,6 +11,7 @@ from pathlib import Path
 import time
 import stat
 import os
+import json
 
 
 class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
@@ -20,42 +21,49 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
 
     @classmethod
     def hash_function(cls, function, use_old_style=False):
-        if hasattr(function, "im_func") and "cyfunction" in repr(function.im_func):
-            invariant = cls.get_cython_source(function)  # pragma: no cover
-        else:
-            if use_old_style:
-                invariant = cls.dis_code(
-                    function.__code__, function, version_info=(3, 6, 1)
-                )
-            else:
-                invariant = cls.dis_code(function.__code__, function)
-        return invariant
+        return super()._get_invariant(
+                False, []
+            )  # forces recalc
 
     def _get_invariant(self, old, all_invariant_stati):
-        invariant_hash = self.hash_function(self.function)
         stf = Path(self.job_id)
         if stf.exists():
             old_hash = stf.read_text()
-            if old_hash != invariant_hash:
-                new_hash_old_style = self.hash_function(self.function, True)
-                if old_hash != new_hash_old_style:
-                    stf = Path(stf)
-                    try:
-                        of = stf.with_name(stf.name + ".changed")
-                        of.write_text(invariant_hash)
-                    except IOError:  # noqa: E722 pragma: no cover
-                        # fallback if the stf directory is not writeable.
-                        of = Path(stf.name + ".changed")  # pragma: no cover
-                        of.write_text(invariant_hash)  # pragma: no cover
-                    raise UpstreamChangedError(
-                        "Calculating function changed, bump version or rollback, or nuke job info ( %s )\n"
-                        "To compare, run \n"
-                        "icdiff %s %s"
-                        % (self.job_id, Path(self.job_id).absolute(), of.absolute())
-                    )
+            if old_hash and old_hash[0] == "{":  # new style
+                old_hash = json.loads(old_hash)
         else:
-            stf.write_text(invariant_hash)
+            old_hash = False
+        try:
+            invariant_hash = super()._get_invariant(
+                old_hash, all_invariant_stati
+            )  # forces recalc.
+            if old_hash is False:
+                stf.write_text(json.dumps(invariant_hash))
+            elif invariant_hash != old_hash:
+                self.complain_about_hash_changes(invariant_hash)
+            else:
+                return old  # signal no change necessary.
+        except ppg.NothingChanged as e:
+            # we accept the stuff there as no change.
+            # and we write out the new value, because it might be a format change.
+            stf.write_text(json.dumps(e.new_value))
+            return old
         return old  # signal no invariant change
+
+    def complain_about_hash_changes(self, invariant_hash):
+        stf = Path(self.job_id)
+        try:
+            of = stf.with_name(stf.name + ".changed")
+            of.write_text(invariant_hash)
+        except IOError:  # noqa: E722 pragma: no cover
+            # fallback if the stf directory is not writeable.
+            of = Path(stf.name + ".changed")  # pragma: no cover
+            of.write_text(invariant_hash)  # pragma: no cover
+        raise UpstreamChangedError(
+            "Calculating function changed, bump version or rollback, or nuke job info ( %s )\n"
+            "To compare, run \n"
+            "icdiff %s %s" % (self.job_id, Path(self.job_id).absolute(), of.absolute())
+        )
 
 
 class _PrebuildFileInvariantsExploding(ppg.MultiFileInvariant):
