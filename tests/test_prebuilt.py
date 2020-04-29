@@ -428,7 +428,7 @@ class TestPrebuilt:
         assert Path("checkme").read_text() == "0.4"
         assert count_file.read_text() == "3"
 
-        # you want 0.4-.. you get' the 0.6
+        # you want 0.4-.. you get' the 0.6, since the build function did not change.
         new_pipegraph.new_pipegraph()
         jobA = mgr.prebuild(
             "partA",
@@ -457,7 +457,7 @@ class TestPrebuilt:
             "0.7",
             [],
             "A",
-            calc_07,  # no change here...
+            calc_07,  # this changed
             minimum_acceptable_version="0.4",
             maximum_acceptable_version=None,
         )

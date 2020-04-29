@@ -20,10 +20,9 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         super().__init__(storage_filename, func)
 
     @classmethod
-    def hash_function(cls, function, use_old_style=False):
-        return super()._get_invariant(
-                False, []
-            )  # forces recalc
+    def hash_function(cls, function):
+        new_source, new_funchash, new_closure = cls._hash_function(function)
+        return cls._compare_new_and_old(new_source, new_funchash, new_closure, False)
 
     def _get_invariant(self, old, all_invariant_stati):
         stf = Path(self.job_id)
@@ -54,15 +53,21 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         stf = Path(self.job_id)
         try:
             of = stf.with_name(stf.name + ".changed")
-            of.write_text(invariant_hash)
+            of.write_text(json.dumps(invariant_hash))
         except IOError:  # noqa: E722 pragma: no cover
             # fallback if the stf directory is not writeable.
             of = Path(stf.name + ".changed")  # pragma: no cover
-            of.write_text(invariant_hash)  # pragma: no cover
+            of.write_text(json.dumps(invariant_hash))  # pragma: no cover
         raise UpstreamChangedError(
-            "Calculating function changed, bump version or rollback, or nuke job info ( %s )\n"
-            "To compare, run \n"
-            "icdiff %s %s" % (self.job_id, Path(self.job_id).absolute(), of.absolute())
+            (
+                "Calculating function changed.\n"
+                "If you are actively working on it, you need to bump the version:\n"
+                "If not, you need to figure out what's causing the change.\n"
+                "Do not nuke the job info (%s) light heartedly\n"
+                "To compare, run \n"
+                "icdiff %s %s"
+            )
+            % (self.job_id, Path(self.job_id).absolute(), of.absolute())
         )
 
 
@@ -283,13 +288,27 @@ class PrebuildManager:
                 ]
             )
             ok_versions = []
-            calculating_function_md5_sum = PrebuildFunctionInvariantFileStoredExploding.hash_function(
-                calculating_function
-            )
+
+            (
+                new_source,
+                new_funchash,
+                new_closure,
+            ) = ppg.FunctionInvariant._hash_function(calculating_function)
+
             for v, p in acceptable_versions:
                 func_md5sum_path = p / "mbf_func.md5sum"
                 func_md5sum = func_md5sum_path.read_text()
-                if func_md5sum == calculating_function_md5_sum:
+                if func_md5sum[0] == "{":
+                    func_md5sum = json.loads(func_md5sum)
+                ok = False
+                try:
+                    new = ppg.FunctionInvariant._compare_new_and_old(
+                        new_source, new_funchash, new_closure, func_md5sum
+                    )
+                    ok = False
+                except ppg.NothingChanged:
+                    ok = True
+                if ok:
                     ok_versions.append((v, p))
 
             if ok_versions:

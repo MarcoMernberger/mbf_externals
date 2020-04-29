@@ -259,7 +259,7 @@ class ExternalAlgorithm(ABC):
 
             pprint.pprint(by_hash)
             raise DownloadDiscrepancyException(
-                "Found multiple different {target_filename.name} with different md5sum. Investitage and fix (possibly using reproducible_tar), please."
+                f"Found multiple different {target_filename.name} with different md5sum. Investitage and fix (possibly using reproducible_tar), please."
             )
 
     def fetch_version(self, version, target_filename):  # pragma: no cover
