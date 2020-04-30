@@ -7,7 +7,9 @@
 
 # import pytest
 import sys
+import os
 from pathlib import Path
+os.chdir(Path(__file__).parent.absolute())
 
 from pypipegraph.testing.fixtures import (  # noqa:F401
     new_pipegraph,

@@ -25,8 +25,12 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         return cls._compare_new_and_old(new_source, new_funchash, new_closure, False)
 
     def _get_invariant(self, old, all_invariant_stati):
-        stf = Path(self.job_id) # the old file format - using just the function's dis-ed code.
-        stf2 = Path(self.job_id).with_name(stf.name + '2') # the new style, dict based storage just like FunctionInvariant after 0.190
+        stf = Path(
+            self.job_id
+        )  # the old file format - using just the function's dis-ed code.
+        stf2 = Path(self.job_id).with_name(
+            stf.name + "2"
+        )  # the new style, dict based storage just like FunctionInvariant after 0.190
         new_source, new_func_hash, new_closure = self._hash_function(self.function)
         if stf2.exists():
             old_hash = json.loads(stf2.read_text())
@@ -263,7 +267,7 @@ class PrebuildManager:
                     result[v.name] = v
         return result
 
-    def prebuild(
+    def prebuild(  # noqa: C901
         self,
         name,
         version,
@@ -273,7 +277,7 @@ class PrebuildManager:
         minimum_acceptable_version=None,
         maximum_acceptable_version=None,
         further_function_deps={},
-    ):  # noqa: C901
+    ):
         """Create a job that will prebuilt the files if necessary
 
         @further_function_deps is a dictionary name => func,
