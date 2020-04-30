@@ -25,29 +25,44 @@ class PrebuildFunctionInvariantFileStoredExploding(ppg.FunctionInvariant):
         return cls._compare_new_and_old(new_source, new_funchash, new_closure, False)
 
     def _get_invariant(self, old, all_invariant_stati):
-        stf = Path(self.job_id)
-        if stf.exists():
+        stf = Path(self.job_id) # the old file format - using just the function's dis-ed code.
+        stf2 = Path(self.job_id).with_name(stf.name + '2') # the new style, dict based storage just like FunctionInvariant after 0.190
+        new_source, new_func_hash, new_closure = self._hash_function(self.function)
+        if stf2.exists():
+            old_hash = json.loads(stf2.read_text())
+        elif stf.exists():
             old_hash = stf.read_text()
-            if old_hash and old_hash[0] == "{":  # new style
-                old_hash = json.loads(old_hash)
+            new_closure = ""
         else:
-            old_hash = False
+            new_value = self._compare_new_and_old(
+                new_source, new_func_hash, new_closure, False
+            )
+            stf2.write_text(json.dumps(new_value))
+            return old  # signal no change necessary.
+
         try:
-            invariant_hash = super()._get_invariant(
-                old_hash, all_invariant_stati
-            )  # forces recalc.
-            if old_hash is False:
-                stf.write_text(json.dumps(invariant_hash))
-            elif invariant_hash != old_hash:
-                self.complain_about_hash_changes(invariant_hash)
+            new_hash = self._compare_new_and_old(
+                new_source, new_func_hash, new_closure, old_hash
+            )
+            if new_hash != old_hash:
+                self.complain_about_hash_changes(new_hash)
             else:
-                return old  # signal no change necessary.
+                return old
         except ppg.NothingChanged as e:
             # we accept the stuff there as no change.
             # and we write out the new value, because it might be a format change.
-            stf.write_text(json.dumps(e.new_value))
-            return old
-        return old  # signal no invariant change
+            try:
+                stf2.write_text(json.dumps(e.new_value))
+            except OSError as e2:
+                if "Read-only file system" in str(e2):
+                    import warnings
+
+                    warnings.warn(
+                        "PrebuildFunctionInvariantFileStoredExploding: Could not update %s to newest version - read only file system"
+                        % stf
+                    )
+            raise e
+        raise NotImplementedError("Should not happen")
 
     def complain_about_hash_changes(self, invariant_hash):
         stf = Path(self.job_id)
@@ -258,7 +273,7 @@ class PrebuildManager:
         minimum_acceptable_version=None,
         maximum_acceptable_version=None,
         further_function_deps={},
-    ):
+    ):  # noqa: C901
         """Create a job that will prebuilt the files if necessary
 
         @further_function_deps is a dictionary name => func,
@@ -297,9 +312,11 @@ class PrebuildManager:
 
             for v, p in acceptable_versions:
                 func_md5sum_path = p / "mbf_func.md5sum"
-                func_md5sum = func_md5sum_path.read_text()
-                if func_md5sum[0] == "{":
-                    func_md5sum = json.loads(func_md5sum)
+                func_md5sum_path2 = p / "mbf_func.md5sum2"
+                try:
+                    func_md5sum = json.loads(func_md5sum_path2.read_text())
+                except OSError:
+                    func_md5sum = func_md5sum_path.read_text()
                 ok = False
                 try:
                     new = ppg.FunctionInvariant._compare_new_and_old(
