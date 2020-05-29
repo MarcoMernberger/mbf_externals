@@ -52,7 +52,7 @@ class ExternalAlgorithm(ABC):
     ExternalAlgorithm encapsulates a callable algorithm such as a high throughput aligner.
     """
 
-    def __init__(self, version="_last_used", store=None):
+    def __init__(self, version="_last_used", store=None, **kwargs):
         """
         Parameters
         ----------
@@ -63,7 +63,7 @@ class ExternalAlgorithm(ABC):
                 (stored '.mbf_external_versions' )
 
         """
-
+        super().__init__(**kwargs)
         if store is None:
             store = _global_store
         self.store = store
@@ -194,6 +194,7 @@ class ExternalAlgorithm(ABC):
             ]
             cmd_out.write_text(repr(cmd))
             start_time = time.time()
+            print(" ".join(cmd))
             p = subprocess.Popen(cmd, stdout=op_stdout, stderr=op_stderr, cwd=cwd)
             p.communicate()
             op_stdout.close()

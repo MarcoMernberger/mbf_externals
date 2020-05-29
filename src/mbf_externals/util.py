@@ -99,7 +99,6 @@ class UpstreamChangedError(ValueError):
 
 def download_file(url, file_object):
     """Download an url"""
-
     if isinstance(file_object, (str, Path)):
         raise ValueError("download_file needs a file-object not a name")
 
