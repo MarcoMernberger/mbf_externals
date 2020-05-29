@@ -40,9 +40,11 @@ class Salmon(ExternalAlgorithm):
         return [genome.job_transcripts()]
 
     def get_build_key(self):
-        return hashlib.md5(
-            str(sorted(self.accepted_biotypes)).encode("utf-8")
-        ).hexdigest()
+        if self.accepted_biotypes is not None:
+            return hashlib.md5(
+                str(sorted(self.accepted_biotypes)).encode("utf-8")
+            ).hexdigest()
+        return hashlib.md5("None".encode("utf-8")).hexdigest()
 
     def build_index_from_genome(self, genome, output_fileprefix):
         import pysam
@@ -82,7 +84,7 @@ class Salmon(ExternalAlgorithm):
                         tf_cdna.write(f">{name}\n{entry.sequence}\n")
                         seen.add(name)
             if not seen:
-                raise ValueError("non seeen", entry.name)
+                raise ValueError("non seen", entry.name)
             for transcript_stable_id in to_output.difference(seen):
                 mrna = genome.transcripts[transcript_stable_id].mrna
                 tf_cdna.write(f">{transcript_stable_id}\n{mrna}\n")
@@ -232,3 +234,45 @@ class Salmon(ExternalAlgorithm):
             output / "QC" / "alevinReport.html", run_qc
         ).depends_on(job)
         return job, qc_job
+
+    def run_quant_on_raw_lane(
+        self, lane, genome, libtype, options=None, gene_level=False
+    ):
+        output = Path(f"results/{self.name}/quant/") / lane.name
+
+        def run_quant():
+            output.mkdir(exist_ok=True, parents=True)
+            self.run_quant(output, lane, genome, libtype, options, gene_level)
+            (output / "sentinel.txt").write_text("done")
+
+        job = ppg.FileGeneratingJob(output / "sentinel.txt", run_quant).depends_on(
+            genome.build_index(self), lane.prepare_input()
+        )
+        return job
+
+    def run_quant(
+        self, outputpath, lane, genome, libtype, options=None, gene_level=False
+    ):
+        output_path = Path(outputpath)
+        index_path = genome.build_index(self).output_path
+        aligner_input = lane.get_aligner_input_filenames()
+        cmd = ["quant", "-i", str(index_path / "index"), "-l", libtype]
+        if gene_level:
+            cmd.extend(["-g", str(index_path / "gene_transcript.mapping")])
+        if len(aligner_input) == 1:
+            cmd.extend(["-r", str(aligner_input[0])])
+        elif len(aligner_input) == 2:
+            cmd.extend(["-1", str(aligner_input[0]), "-2", str(aligner_input[1])])
+        else:
+            raise ValueError(
+                f"Something's wrong with the alinger input: {aligner_input}"
+            )
+        cmd.extend(
+            ["--validateMappings", "-o", str(output_path),]
+        )
+        if options is not None:
+            for key in options:
+                cmd.extend([key, options[key]])
+        print(" ".join(cmd))
+        print(self.path)
+        self.get_run_func(output_path, cmd)()
